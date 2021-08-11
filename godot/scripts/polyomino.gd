@@ -2,17 +2,20 @@ extends Node2D
 
 onready var is_flipped = false
 
-# Declare member variables here. Examples:
-# var a = 2
-# var b = "text"
+onready var Monomino = preload("res://scenes/monomino.tscn")
 
+onready var grid = $grid
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	pass # Replace with function body.
 
-func create():
-	pass
+	var on_positions = [
+		Vector2(2, 1),
+		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
+		Vector2(3, 3),
+	]
+	
+	grid.create(on_positions, Monomino)
 	
 	# randomize flip
 	

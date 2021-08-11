@@ -9,8 +9,8 @@ const OBJECT_LAYER = 2
 ##############################
 # action execution constants #
 ##############################
-const LINEAR_DELTA = 10  # change in pixels - used for linear translations
-const ANGULAR_DELTA = 5.0  # change in degrees - used for rotational actions
+const LINEAR_DELTA = 1 # change in pixels - used for linear translations
+const ANGULAR_DELTA = 2.0  # change in degrees - used for rotational actions
 const SCALE_DELTA = Vector2(0.1, 0.1) # change in scale - used for zooming operations
 
 # for translation operations

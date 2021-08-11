@@ -30,10 +30,20 @@ onready var active_object = $polyomino
 #	'verbosity': 3   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 #}
 
+#onready var Monomino = preload("res://scenes/monomino.tscn")
+#onready var grid = $polyomino
+
 func _ready():
+	pass
+#	var on_positions = [
+#		Vector2(2, 1),
+#		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
+#		Vector2(3, 3),
+#	]
+#
+#	grid.create(on_positions, Monomino)
 
 	# initialize first polyomino
-	pass
 		
 	# initialize Godot-AI-Bridge
 #	gab.connect(gab_options)
