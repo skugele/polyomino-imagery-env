@@ -1,0 +1,18 @@
+# Godot
+*.import
+.import/
+export.cfg
+export_presets.cfg
+
+# Python
+__pycache_/
+*.py[cod]
+*$py.class
+
+# Python - virtual environment
+venv/
+
+# PyCharm
+.idea
+
+
