@@ -15,5 +15,5 @@ func _ready():
 func create(on_positions, on_tile):
 	for pos in on_positions:
 		var instance = on_tile.instance()
-		instance.global_position = map_to_world(pos) # + Vector2(7, 7)
+		instance.global_position = map_to_world(pos)
 		add_child(instance)

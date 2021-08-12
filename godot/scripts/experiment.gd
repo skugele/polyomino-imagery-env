@@ -6,7 +6,7 @@ extends Node2D
 onready var pending_actions = []
 
 # only a single piece can be active at one time
-onready var active_object = $polyomino
+onready var active_object = null
 
 
 ###################################
@@ -35,16 +35,6 @@ onready var active_object = $polyomino
 
 func _ready():
 	pass
-#	var on_positions = [
-#		Vector2(2, 1),
-#		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
-#		Vector2(3, 3),
-#	]
-#
-#	grid.create(on_positions, Monomino)
-
-	# initialize first polyomino
-		
 	# initialize Godot-AI-Bridge
 #	gab.connect(gab_options)
 
@@ -68,6 +58,8 @@ func _input(event):
 		add_action('zoom_in')
 	elif event.is_action_pressed("ui_zoom_out"):
 		add_action('zoom_out')
+	elif event.is_action_pressed("ui_next_shape"):
+		add_action('next_shape')		
 
 #func _create_publish_timer(wait_time):
 #	var publish_timer = Timer.new()
@@ -103,10 +95,24 @@ func execute(action):
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
 		'zoom_in', 'zoom_out': execute_zoom(action)
+		'next_shape': execute_next_shape()
 				
 		# default case: unrecognized action
 		_: print('unrecogized action: ', action)
 
+func execute_next_shape():
+	
+	var id = 0 if (active_object == null) else (active_object.id + 1) % Globals.N_PENTOMINOS
+			
+	var shape = Globals.PENTOMINOS[id].duplicate()
+	shape.global_position = Vector2(64, 64)	
+	
+	if active_object != null:
+		remove_child(active_object)
+		
+	add_child(shape)
+	active_object = shape
+	
 func execute_translation(action):
 	
 	match action:	

@@ -1,36 +1,12 @@
 extends Node2D
 
-onready var is_flipped = false
+var Monomino = preload("res://scenes/monomino.tscn")
 
-onready var Monomino = preload("res://scenes/monomino.tscn")
-
-onready var grid = $grid
+var id = 1
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	$grid.create([], Monomino)
 
-	var on_positions = [
-		Vector2(2, 1),
-		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
-		Vector2(3, 3),
-	]
-	
-	grid.create(on_positions, Monomino)
-	
-	# randomize flip
-	
-	# if flipped, set is_flipped == true
-	
-	# randomize rotation
-	
-# reflects the object along its horizontal axis
-func flip():
-	pass
-
-func randomize_rotatation():
-	pass
-	
-	
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-#func _process(delta):
-#	pass
+func create(on_positions):
+	$grid.create(on_positions, Monomino)
