@@ -32,6 +32,10 @@ onready var gab_options = {
 
 
 func _ready():
+	
+	# this line was necessary to remove extra "border" lines appearing in screenshots (dims were 130x128!)
+	get_viewport().size = Vector2(128, 128)
+	
 	# initialize Godot-AI-Bridge
 	gab.connect(gab_options)
 
@@ -69,9 +73,8 @@ func _create_publish_timer(wait_time):
 	publish_timer.start()
 
 
+# removes and executes the oldest pending action from the queue (if one exists)
 func _process(_delta):
-	
-	# removes and executes the oldest pending action from the queue (if one exists)
 	var action = pending_actions.pop_front()
 	if action:
 		execute(action)
@@ -157,6 +160,21 @@ func execute_zoom(action):
 		
 	active_object.scale = new_scale
 
+
+func get_screenshot():
+	var screenshot = get_viewport().get_texture().get_data()
+
+	# the viewport data is vertically flipped. this is a workaround.
+	screenshot.flip_y()
+	
+	# single value per pixel representing luminance (8-bit depth)
+	screenshot.convert(Image.FORMAT_L8)
+	
+	print('size: ', screenshot.get_size())
+	
+	return screenshot.get_data()
+
+
 #######################
 ### SIGNAL HANDLERS ###
 #######################
@@ -164,19 +182,16 @@ func execute_zoom(action):
 # signal handler for publish_timer's "timeout" signal
 func _on_publish_state():
 
-	var topic = '/polyomino/screenshot'
+	var topic = '/polyomino-world/state'
 
+	var shape = null if (active_object == null) else active_object.shape
+	var id = null if (active_object == null) else active_object.id
+	
 	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages are also
 	# given a "header" element containing a unique sequence numbers (seqno) and timestamp in milliseconds
-	var screenshot = get_viewport().get_texture().get_data()
-	
-	# FIXME: this may not be necessary
-	screenshot.flip_y()
-	
-	# single value per pixel representing luminance (8-bit depth)
-	screenshot.convert(Image.FORMAT_L8)
-
-	var msg = {'data' : screenshot.get_data()}
+	var msg = {'shape' : shape,
+			   'id' : id,
+			   'screenshot' : get_screenshot()}
 
 	# broadcasts the message to all clients
 	gab.send(topic, msg)
@@ -184,7 +199,8 @@ func _on_publish_state():
 
 # signal handler for Godot-AI-Bridge's "event_requested" signal
 func _on_event_requested(event_details):
-	print('Godot Environment: event request received -> "%s"' % event_details)
+	if Globals.DEBUG_MODE:
+		print('Godot Environment: event request received -> "%s"' % event_details)
 	
 	var event = event_details['data']['event']
 	if event['type'] == 'action':

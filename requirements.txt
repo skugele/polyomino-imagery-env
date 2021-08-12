@@ -1,2 +1,8 @@
 # ZeroMQ
 pyzmq
+
+# PIL (Python imaging library)
+Pillow
+
+# NumPy
+numpy

@@ -45,6 +45,7 @@ func _create_pentominos():
 	for p in range(N_PENTOMINOS):
 		var instance = Polyomino.instance()
 		instance.id = p
+		instance.shape = SHAPES.PENTOMINOS
 		_PENTOMINOS.append(instance) 
 		
 	#################

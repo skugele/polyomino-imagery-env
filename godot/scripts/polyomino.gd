@@ -1,5 +1,6 @@
 extends Node2D
 
+var shape = null
 var id = null
 var on_positions = []
 
