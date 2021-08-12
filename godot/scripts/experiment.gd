@@ -12,34 +12,32 @@ onready var active_object = null
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
 ###################################
-#onready var gab = $GabLib  # library reference
-#onready var gab_options = {
-#	'publisher_port': 10003, # specifies alternate port - default port is 10001
-#	'listener_port': 10004, # specifies alternate port - default port is 10002
-#
-#	# supported socket options (for advanced users - see ZeroMQ documentation for details)
-#	'socket_options': {
-#		'ZMQ_RCVHWM': 10,  # receive highwater mark
-#		'ZMQ_RCVTIMEO': 50,  # timeout on receive I/O blocking
-#		'ZMQ_SNDHWM': 10,  # send highwater mark
-#		'ZMQ_SNDTIMEO': 50,  # timeout on send I/O blocking
-#		'ZMQ_CONFLATE': 0  # only keep last message in send/receive queues (others are dropped)
-#	},
-#
-#	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-#	'verbosity': 3   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
-#}
+onready var gab = $GabLib  # library reference
+onready var gab_options = {
+	'publisher_port': 10001, # specifies alternate port - default port is 10001
+	'listener_port': 10002, # specifies alternate port - default port is 10002
 
-#onready var Monomino = preload("res://scenes/monomino.tscn")
-#onready var grid = $polyomino
+	# supported socket options (for advanced users - see ZeroMQ documentation for details)
+	'socket_options': {
+		'ZMQ_RCVHWM': 10,  # receive highwater mark
+		'ZMQ_RCVTIMEO': 50,  # timeout on receive I/O blocking
+		'ZMQ_SNDHWM': 10,  # send highwater mark
+		'ZMQ_SNDTIMEO': 50,  # timeout on send I/O blocking
+		'ZMQ_CONFLATE': 0  # only keep last message in send/receive queues (others are dropped)
+	},
+
+	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
+	'verbosity': 4   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+}
+
 
 func _ready():
-	pass
 	# initialize Godot-AI-Bridge
-#	gab.connect(gab_options)
+	gab.connect(gab_options)
 
 	# initializes a timer that controls the frequency of environment state broadcasts
-#	_create_publish_timer(0.1)
+	_create_publish_timer(1.0)
+
 
 func _input(event):	
 	if event.is_action_pressed("ui_up"):
@@ -61,15 +59,14 @@ func _input(event):
 	elif event.is_action_pressed("ui_next_shape"):
 		add_action('next_shape')		
 
-#func _create_publish_timer(wait_time):
-#	var publish_timer = Timer.new()
-#
-#	publish_timer.wait_time = wait_time  
-#	publish_timer.connect("timeout", self, "_on_publish_state")
-#	add_child(publish_timer)
-#	publish_timer.start()
 
+func _create_publish_timer(wait_time):
+	var publish_timer = Timer.new()
 
+	publish_timer.wait_time = wait_time  
+	publish_timer.connect("timeout", self, "_on_publish_state")
+	add_child(publish_timer)
+	publish_timer.start()
 
 
 func _process(_delta):
@@ -79,6 +76,7 @@ func _process(_delta):
 	if action:
 		execute(action)
 
+
 # adds an action to the agent's pending_actions queue for later execution
 func add_action(action):
 	if Globals.DEBUG_MODE:
@@ -86,7 +84,7 @@ func add_action(action):
 		
 	pending_actions.push_back(action)
 
-# executes an action
+
 func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
@@ -100,6 +98,7 @@ func execute(action):
 		# default case: unrecognized action
 		_: print('unrecogized action: ', action)
 
+
 func execute_next_shape():
 	var id = 0
 	if active_object != null:
@@ -110,8 +109,11 @@ func execute_next_shape():
 	active_object.global_position = Vector2(64, 64)	
 	
 	add_child(active_object)
-	
+
+
 func execute_translation(action):
+	if active_object == null:
+		return
 	
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
@@ -122,7 +124,11 @@ func execute_translation(action):
 		# default case: unrecognized translation
 		_: print('unrecogized translation: ', action)
 
+
 func execute_rotation(action):
+	if active_object == null:
+		return
+		
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
@@ -130,7 +136,11 @@ func execute_rotation(action):
 		# default case: unrecognized rotation
 		_: print('unrecogized rotation: ', action)
 
+
 func execute_zoom(action):
+	if active_object == null:
+		return
+		
 	var new_scale = null
 	
 	match action:
@@ -152,31 +162,30 @@ func execute_zoom(action):
 #######################
 
 # signal handler for publish_timer's "timeout" signal
-#func _on_publish_state():
-#	for agent in $Agents.get_children():
-#
-#		# topics characterize message content. recipients can use topics to filter messages (e.g., by agent id)
-#		var topic = '/polyomino/agent/%s' % agent.id
-#
-#		# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages are also
-#		# given a "header" element containing a unique sequence numbers (seqno) and timestamp in milliseconds
-#		var msg = agent.get_state()
-#
-#		# broadcasts the message to all clients
-#		gab.send(topic, msg)
+func _on_publish_state():
+
+	var topic = '/polyomino/screenshot'
+
+	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages are also
+	# given a "header" element containing a unique sequence numbers (seqno) and timestamp in milliseconds
+	var screenshot = get_viewport().get_texture().get_data()
 	
+	# FIXME: this may not be necessary
+	screenshot.flip_y()
+	
+	# single value per pixel representing luminance (8-bit depth)
+	screenshot.convert(Image.FORMAT_L8)
+
+	var msg = {'data' : screenshot.get_data()}
+
+	# broadcasts the message to all clients
+	gab.send(topic, msg)
+
+
 # signal handler for Godot-AI-Bridge's "event_requested" signal
-#func _on_event_requested(event_details):
-#	print('Godot Environment: event request received -> "%s"' % event_details)
-#
-#	var event = event_details['data']['event']	
-#	match event['type']:
-#		'action':
-#			# apply action to all agents with matching id
-#			for agent in $Agents.get_children():
-#				# adds action to an agent's pending action queue
-#				if event['agent'] == agent.id:				
-#					agent.add_action(event['value'])
-#
-#		# default case: unrecognized actions
-#		_: print('unrecogized event type: ', event['type']) 
+func _on_event_requested(event_details):
+	print('Godot Environment: event request received -> "%s"' % event_details)
+	
+	var event = event_details['data']['event']
+	if event['type'] == 'action':
+		add_action(event['value'])
