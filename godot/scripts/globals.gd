@@ -1,6 +1,6 @@
 extends Node
 
-const DEBUG_MODE = true
+const DEBUG_MODE = false
 
 # layer bitmask values
 const BOUNDARY_LAYER = 1
@@ -20,8 +20,8 @@ const MIN_Y = -1000.0
 const MAX_Y = 1000.0
 
 # for scaling operations
-const MIN_SCALE = Vector2(0.8, 0.8)
-const MAX_SCALE = Vector2(1.5, 1.5)
+const MIN_SCALE = Vector2(0.65, 0.65)
+const MAX_SCALE = Vector2(1.4, 1.4)
 const DEFAULT_SCALE = Vector2(2.0, 2.0)
 
 const POLYOMINO_SCENE = preload("res://scenes/polyomino.tscn")

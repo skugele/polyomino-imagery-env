@@ -101,12 +101,12 @@ if __name__ == "__main__":
 
         while True:
             topic, payload = receive(connection)
-            print(f'topic: {topic}; payload: {payload}', flush=True)
 
             screenshot = get_screenshot(payload)
             filename = get_screenshot_filename(payload, 'png')
-
             save_screenshot(screenshot, filename)
+
+            print(f'Image received: {payload["header"]}. Saved as {filename}.', flush=True)
 
     except KeyboardInterrupt:
 

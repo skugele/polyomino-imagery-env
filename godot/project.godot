@@ -17,7 +17,6 @@ _global_script_class_icons={
 
 config/name="Polyomino Imagery Environment"
 run/main_scene="res://scenes/experiment.tscn"
-config/icon="res://icon.png"
 
 [autoload]
 
@@ -68,4 +67,3 @@ ui_next_shape={
 [rendering]
 
 environment/default_clear_color=Color( 0, 0, 0, 1 )
-environment/default_environment="res://default_env.tres"

@@ -30,12 +30,17 @@ onready var gab_options = {
 	'verbosity': 4   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
+# state variable for tracking object-boundary collisions
+onready var boundary_collisions = 0
+
 
 func _ready():
-	
-	# this line was necessary to remove extra "border" lines appearing in screenshots (dims were 130x128!)
-	get_viewport().size = Vector2(128, 128)
-	
+
+	# this line was added to remove extra "border" lines appearing in screenshots. 
+	# screenshot dimensions were 130x128!
+	get_viewport().size = Vector2(ProjectSettings.get_setting("display/window/size/width"),
+								  ProjectSettings.get_setting("display/window/size/height")) 
+
 	# initialize Godot-AI-Bridge
 	gab.connect(gab_options)
 
@@ -61,7 +66,7 @@ func _input(event):
 	elif event.is_action_pressed("ui_zoom_out"):
 		add_action('zoom_out')
 	elif event.is_action_pressed("ui_next_shape"):
-		add_action('next_shape')		
+		add_action('next_shape')
 
 
 func _create_publish_timer(wait_time):
@@ -75,9 +80,17 @@ func _create_publish_timer(wait_time):
 
 # removes and executes the oldest pending action from the queue (if one exists)
 func _process(_delta):
-	var action = pending_actions.pop_front()
-	if action:
-		execute(action)
+	
+	# move active objects towards centroid in the event of a collision
+	if boundary_collisions > 0:
+		var curr_pos = active_object.global_position
+		var safe_pos = $centroid.global_position
+		
+		active_object.global_position = curr_pos.move_toward(safe_pos, Globals.LINEAR_DELTA)
+	else:
+		var action = pending_actions.pop_front()
+		if action:
+			execute(action)
 
 
 # adds an action to the agent's pending_actions queue for later execution
@@ -91,7 +104,7 @@ func add_action(action):
 func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
-		
+	
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -109,7 +122,7 @@ func execute_next_shape():
 		remove_child(active_object)
 	
 	active_object = Globals.get_object(Globals.SHAPES.PENTOMINOS, id)
-	active_object.global_position = Vector2(64, 64)	
+	active_object.global_position = $centroid.global_position
 	
 	add_child(active_object)
 
@@ -117,7 +130,7 @@ func execute_next_shape():
 func execute_translation(action):
 	if active_object == null:
 		return
-	
+		
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -126,7 +139,6 @@ func execute_translation(action):
 
 		# default case: unrecognized translation
 		_: print('unrecogized translation: ', action)
-
 
 func execute_rotation(action):
 	if active_object == null:
@@ -143,7 +155,7 @@ func execute_rotation(action):
 func execute_zoom(action):
 	if active_object == null:
 		return
-		
+	
 	var new_scale = null
 	
 	match action:
@@ -160,7 +172,6 @@ func execute_zoom(action):
 		
 	active_object.scale = new_scale
 
-
 func get_screenshot():
 	var screenshot = get_viewport().get_texture().get_data()
 
@@ -169,8 +180,6 @@ func get_screenshot():
 	
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
-	
-	print('size: ', screenshot.get_size())
 	
 	return screenshot.get_data()
 
@@ -205,3 +214,18 @@ func _on_event_requested(event_details):
 	var event = event_details['data']['event']
 	if event['type'] == 'action':
 		add_action(event['value'])
+
+
+# signal handler for boundary collisions
+func _on_boundary_entered(_area):
+	if Globals.DEBUG_MODE:
+		print('boundary entered')
+		
+	boundary_collisions += 1
+
+func _on_boundary_exited(_area):
+	if Globals.DEBUG_MODE:
+		print('boundary exited')
+		
+	boundary_collisions -= 1
+
