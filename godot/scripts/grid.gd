@@ -1,19 +1,9 @@
 extends TileMap
 
-#onready var tile_size = null
-#onready var half_tile_size = null
-#
-#onready var grid_size = null
-#onready var tile_class = null
+var Monomino = preload("res://scenes/monomino.tscn")
 
-#onready var grid = []
-
-
-func _ready():
-	pass
-
-func create(on_positions, on_tile):
+func create(on_positions):
 	for pos in on_positions:
-		var instance = on_tile.instance()
+		var instance = Monomino.instance()
 		instance.global_position = map_to_world(pos)
 		add_child(instance)

@@ -24,26 +24,28 @@ const MIN_SCALE = Vector2(0.8, 0.8)
 const MAX_SCALE = Vector2(1.5, 1.5)
 const DEFAULT_SCALE = Vector2(2.0, 2.0)
 
+const POLYOMINO_SCENE = preload("res://scenes/polyomino.tscn")
+enum SHAPES {TROMINOS, TETROMINOS, PENTOMINOS}
+
 const N_PENTOMINOS = 18
-onready var PENTOMINOS = []
-
 const N_TETROMINOS = 7
-onready var TETROMINOS = []
-
 const N_TROMINOS = 2
-onready var TROMINOS
+
+onready var _PENTOMINOS = []
+onready var _TETROMINOS = []
+onready var _TROMINOS = []
 
 func _ready():
-	create_pentominos()
-
-func create_pentominos():
+	_create_pentominos()
+	
+func _create_pentominos():
 	var Polyomino = preload("res://scenes/polyomino.tscn")
 	
 	# initialize polyominos
 	for p in range(N_PENTOMINOS):
 		var instance = Polyomino.instance()
 		instance.id = p
-		PENTOMINOS.append(instance) 
+		_PENTOMINOS.append(instance) 
 		
 	#################
 	#    0 1 2 3 4  #
@@ -53,11 +55,11 @@ func create_pentominos():
 	#  3       X    #
 	#  4            #
 	################
-	PENTOMINOS[0].create([
+	_PENTOMINOS[0].on_positions = [
 		Vector2(2, 1),
 		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
 		Vector2(3, 3),
-	])
+	]
 
 	
 	#################
@@ -68,11 +70,11 @@ func create_pentominos():
 	#  3   X        #
 	#  4            #
 	#################
-	PENTOMINOS[1].create([
+	_PENTOMINOS[1].on_positions = [
 		Vector2(2, 1),
 		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2),
 		Vector2(1, 3),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -82,12 +84,12 @@ func create_pentominos():
 	#  3     X      #
 	#  4     X X    #
 	#################
-	PENTOMINOS[2].create([
+	_PENTOMINOS[2].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2),
 		Vector2(2, 3),
 		Vector2(2, 4), Vector2(3, 4),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -97,12 +99,12 @@ func create_pentominos():
 	#  3     X      #
 	#  4   X X      #
 	#################
-	PENTOMINOS[3].create([
+	_PENTOMINOS[3].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2),
 		Vector2(2, 3),
 		Vector2(2, 4), Vector2(1, 4),
-	])
+	]
 
 	
 	#################
@@ -113,11 +115,11 @@ func create_pentominos():
 	#  3   X X      #
 	#  4            #
 	#################
-	PENTOMINOS[4].create([
+	_PENTOMINOS[4].on_positions = [
 		Vector2(2, 1),
 		Vector2(1, 2), Vector2(2, 2),
 		Vector2(1, 3), Vector2(2, 3),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -127,11 +129,11 @@ func create_pentominos():
 	#  3     X X    #
 	#  4            #
 	#################
-	PENTOMINOS[5].create([
+	_PENTOMINOS[5].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2), Vector2(3, 2), 
 		Vector2(2, 3), Vector2(3, 3),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -141,12 +143,12 @@ func create_pentominos():
 	#  3   X X      #
 	#  4   X        #
 	#################
-	PENTOMINOS[6].create([
+	_PENTOMINOS[6].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2), 
 		Vector2(1, 3), Vector2(2, 3), 
 		Vector2(1, 4),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -156,12 +158,12 @@ func create_pentominos():
 	#  3     X X    #
 	#  4       X    #
 	#################
-	PENTOMINOS[7].create([
+	_PENTOMINOS[7].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2), 
 		Vector2(2, 3), Vector2(3, 3), 
 		Vector2(3, 4),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -171,12 +173,12 @@ func create_pentominos():
 	#  3     X      #
 	#  4     X      #
 	#################
-	PENTOMINOS[8].create([
+	_PENTOMINOS[8].on_positions = [
 		Vector2(2, 1),
 		Vector2(1, 2), Vector2(2, 2), 
 		Vector2(2, 3),
 		Vector2(2, 4),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -186,12 +188,12 @@ func create_pentominos():
 	#  3     X      #
 	#  4     X      #
 	#################
-	PENTOMINOS[9].create([
+	_PENTOMINOS[9].on_positions = [
 		Vector2(2, 1),
 		Vector2(2, 2), Vector2(3, 2), 
 		Vector2(2, 3),
 		Vector2(2, 4),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -201,11 +203,11 @@ func create_pentominos():
 	#  3   X X      #
 	#  4            #
 	#################
-	PENTOMINOS[10].create([
+	_PENTOMINOS[10].on_positions = [
 		Vector2(2, 1), Vector2(3, 1),
 		Vector2(2, 2),
 		Vector2(1, 3), Vector2(2, 3),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -215,11 +217,11 @@ func create_pentominos():
 	#  3     X X    #
 	#  4            #
 	#################
-	PENTOMINOS[11].create([
+	_PENTOMINOS[11].on_positions = [
 		Vector2(1, 1), Vector2(2, 1),
 		Vector2(2, 2),
 		Vector2(2, 3), Vector2(3, 3),
-	])
+	]
 	
 	
 	#################
@@ -230,13 +232,13 @@ func create_pentominos():
 	#  3     X      #
 	#  4     X      #
 	#################
-	PENTOMINOS[12].create([
+	_PENTOMINOS[12].on_positions = [
 		Vector2(2, 0), 
 		Vector2(2, 1),
 		Vector2(2, 2),
 		Vector2(2, 3), 
 		Vector2(2, 4),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -246,11 +248,11 @@ func create_pentominos():
 	#  3   X X X    #
 	#  4            #
 	#################
-	PENTOMINOS[13].create([
+	_PENTOMINOS[13].on_positions = [
 		Vector2(2, 1), 
 		Vector2(2, 2),
 		Vector2(1, 3),	Vector2(2, 3), 	Vector2(3, 3),
-	])
+	]
 	
 	#################
 	#    0 1 2 3 4  #
@@ -260,10 +262,10 @@ func create_pentominos():
 	#  3            #
 	#  4            #
 	#################
-	PENTOMINOS[14].create([
+	_PENTOMINOS[14].on_positions = [
 		Vector2(1, 1), Vector2(3, 1), 
 		Vector2(1, 2),	Vector2(2, 2), 	Vector2(3, 2),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -273,11 +275,11 @@ func create_pentominos():
 	#  3 X X X      #
 	#  4            #
 	#################
-	PENTOMINOS[15].create([
+	_PENTOMINOS[15].on_positions = [
 		Vector2(2, 1), 
 		Vector2(2, 2), 
 		Vector2(0, 3),	Vector2(1, 3), 	Vector2(2, 3),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -287,11 +289,11 @@ func create_pentominos():
 	#  3   X X      #
 	#  4            #
 	#################
-	PENTOMINOS[16].create([
+	_PENTOMINOS[16].on_positions = [
 		Vector2(3, 1), 
 		Vector2(2, 2), Vector2(3, 2), 
 		Vector2(1, 3),	Vector2(2, 3),
-	])
+	]
 
 	#################
 	#    0 1 2 3 4  #
@@ -301,8 +303,21 @@ func create_pentominos():
 	#  3     X      #
 	#  4            #
 	#################
-	PENTOMINOS[17].create([
+	_PENTOMINOS[17].on_positions = [
 		Vector2(2, 1), 
 		Vector2(1, 2), Vector2(2, 2), Vector2(3, 2), 
 		Vector2(2, 3),
-	])
+	]
+
+func get_object(shape, id):
+	var object = POLYOMINO_SCENE.instance()
+	
+	match shape:
+		SHAPES.TROMINOS: pass
+		SHAPES.TETROMINOS: pass
+		SHAPES.PENTOMINOS:
+			object.copy(_PENTOMINOS[id])
+		
+		_: print('unrecognized shape: ', shape)
+			
+	return object

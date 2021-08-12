@@ -1,12 +1,15 @@
 extends Node2D
 
-var Monomino = preload("res://scenes/monomino.tscn")
+var id = null
+var on_positions = []
 
-var id = 1
-
-# Called when the node enters the scene tree for the first time.
 func _ready():
-	$grid.create([], Monomino)
+	$grid.create(on_positions)
 
-func create(on_positions):
-	$grid.create(on_positions, Monomino)
+func _enter_tree():
+	rotation = 0.0
+	scale = Vector2(1.0, 1.0)	
+	
+func copy(other):
+	id = other.id
+	on_positions = other.on_positions.duplicate()

@@ -101,17 +101,15 @@ func execute(action):
 		_: print('unrecogized action: ', action)
 
 func execute_next_shape():
-	
-	var id = 0 if (active_object == null) else (active_object.id + 1) % Globals.N_PENTOMINOS
-			
-	var shape = Globals.PENTOMINOS[id].duplicate()
-	shape.global_position = Vector2(64, 64)	
-	
+	var id = 0
 	if active_object != null:
+		id = (active_object.id + 1) % Globals.N_PENTOMINOS
 		remove_child(active_object)
-		
-	add_child(shape)
-	active_object = shape
+	
+	active_object = Globals.get_object(Globals.SHAPES.PENTOMINOS, id)
+	active_object.global_position = Vector2(64, 64)	
+	
+	add_child(active_object)
 	
 func execute_translation(action):
 	
