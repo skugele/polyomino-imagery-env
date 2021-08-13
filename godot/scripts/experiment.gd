@@ -1,15 +1,34 @@
-# GDScript: environment.gd
+# GDScript: experiment.gd
 
 extends Node2D
+
+
+###############################
+# Environment State Variables #
+###############################
 
 # a queue of actions that are pending execution
 onready var pending_actions = []
 
+# state variable for tracking object-boundary collisions
+onready var boundary_collisions = {'top': 0,  'bottom': 0, 'left': 0, 'right': 0}
+
 # only a single piece can be active at one time
 onready var active_object = null
 
+# stores dictionary elements that identify the shape and id for polyominos. the order of these elements
+# determines the order in which they will be presented at runtime
+onready var polyomino_configs = []
+
+###############################
+# State Publication Variables #
+###############################
+
 # timer for state (e.g., screenshot) publication to clients
 var publish_timer = Timer.new()
+
+# used to preemptively publish a state change ahead of publish_timer timeout
+onready var unpublished_change = true
 
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
@@ -32,10 +51,6 @@ onready var gab_options = {
 	'verbosity': 4   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
-# state variable for tracking object-boundary collisions
-onready var boundary_collisions = 0
-
-onready var unpublished_change = true
 
 func _ready():
 
@@ -52,6 +67,18 @@ func _ready():
 	publish_timer.connect("timeout", self, "_on_publish_state")
 	add_child(publish_timer)
 	
+	# configures
+	initialize_polyomino_configs()
+
+
+func initialize_polyomino_configs():
+	
+	for shape_name in Globals.SHAPES:
+		var shape = Globals.SHAPES[shape_name]
+		for id in Globals.cardinality(shape):
+			var config = {'shape': shape, 'id': id}
+			polyomino_configs.append(config)
+
 
 func _input(event):	
 	if event.is_action_pressed("ui_up"):
@@ -80,11 +107,23 @@ func _process(_delta):
 		publish_state()
 			
 	# move active objects towards centroid in the event of a collision
-	if boundary_collisions > 0:
-		var curr_pos = active_object.global_position
-		var safe_pos = $centroid.global_position
+	if has_collision():
+		if Globals.DEBUG_MODE:
+			print('handling collisions!')
 		
-		active_object.global_position = curr_pos.move_toward(safe_pos, Globals.LINEAR_DELTA)
+		var corrective_dir = Vector2(0, 0)
+
+		for boundary in get_colliding_boundaries():
+			match boundary:
+				'top' : corrective_dir += Vector2(0, 1)
+				'bottom' : corrective_dir += Vector2(0, -1)
+				'left' : corrective_dir += Vector2(1, 0)
+				'right' : corrective_dir += Vector2(-1, 0)
+				
+				_: print('unknown boundary: ', boundary)
+				
+		active_object.global_position += corrective_dir 
+		
 	else:
 		var action = pending_actions.pop_front()
 		if action:
@@ -100,6 +139,23 @@ func _process(_delta):
 			# inactivity - begin time-based publication
 			if publish_timer.is_stopped():
 				publish_timer.start()
+
+
+func has_collision():
+	for value in boundary_collisions.values():
+		if value > 0:
+			return true
+			
+	return false
+
+
+func get_colliding_boundaries():
+	var boundaries = []
+	for key in boundary_collisions.keys():
+		if boundary_collisions[key] > 0:
+			boundaries.append(key)
+			
+	return boundaries
 
 
 # adds an action to the agent's pending_actions queue for later execution
@@ -125,58 +181,28 @@ func execute(action):
 
 
 func execute_next_shape():
-	var id = 0
-	
-	# pentominos specific
+
+	# remove last polyomino from scene
 	if active_object != null:
-		id = (active_object.id + 1) % Globals.N_PENTOMINOS
 		remove_child(active_object)
+		active_object = null
+			
+	# retrieve configuration details needed to create next polyomino object
+	var config = polyomino_configs.pop_front()
+	
+	# reinitialize configs if last element has been removed
+	if config == null:
+		initialize_polyomino_configs()
 
-	active_object = Globals.get_object(Globals.SHAPES.PENTOMINOS, id)
-	active_object.global_position = $centroid.global_position
+	# create a new polyomino based on config and add to the scene
+	else:
+		var new_object = Globals.get_object(config['shape'], config['id'])
+		new_object.global_position = $centroid.global_position
+			
+		add_child(new_object)
+		active_object = new_object
 
-	add_child(active_object)
 
-	# tetrominos specific
-#	if active_object != null:
-#		id = (active_object.id + 1) % Globals.N_TETROMINOS
-#		remove_child(active_object)
-#
-#	active_object = Globals.get_object(Globals.SHAPES.TETROMINOS, id)
-#	active_object.global_position = $centroid.global_position
-#
-#	add_child(active_object)
-	
-	# trominos specific
-#	if active_object != null:
-#		id = (active_object.id + 1) % Globals.N_TROMINOS
-#		remove_child(active_object)
-#
-#	active_object = Globals.get_object(Globals.SHAPES.TROMINOS, id)
-#	active_object.global_position = $centroid.global_position
-#
-#	add_child(active_object)
-	
-	# dominos specific
-#	if active_object != null:
-#		id = (active_object.id + 1) % Globals.N_DOMINOS
-#		remove_child(active_object)
-#
-#	active_object = Globals.get_object(Globals.SHAPES.DOMINOS, id)
-#	active_object.global_position = $centroid.global_position
-#
-#	add_child(active_object)
-	
-	# monominos specific
-#	if active_object != null:
-#		id = (active_object.id + 1) % Globals.N_MONOMINOS
-#		remove_child(active_object)
-#
-#	active_object = Globals.get_object(Globals.SHAPES.MONOMINOS, id)
-#	active_object.global_position = $centroid.global_position
-#
-#	add_child(active_object)
-	
 func execute_translation(action):
 	if active_object == null:
 		return
@@ -271,15 +297,29 @@ func _on_event_requested(event_details):
 
 
 # signal handler for boundary collisions
-func _on_boundary_entered(_area):
+func _on_boundary_entered(boundary):
 	if Globals.DEBUG_MODE:
-		print('boundary entered')
-		
-	boundary_collisions += 1
+		print('boundary entered: ', boundary)
+	
+	if boundary == $boundaries/top:
+		boundary_collisions['top'] += 1
+	elif boundary == $boundaries/bottom:
+		boundary_collisions['bottom'] += 1
+	elif boundary == $boundaries/left:
+		boundary_collisions['left'] += 1
+	elif boundary == $boundaries/right:
+		boundary_collisions['right'] += 1
 
-func _on_boundary_exited(_area):
+
+func _on_boundary_exited(boundary):
 	if Globals.DEBUG_MODE:
-		print('boundary exited')
+		print('boundary exited: ', boundary)
 		
-	boundary_collisions -= 1
-
+	if boundary == $boundaries/top:
+		boundary_collisions['top'] -= 1
+	elif boundary == $boundaries/bottom:
+		boundary_collisions['bottom'] -= 1
+	elif boundary == $boundaries/left:
+		boundary_collisions['left'] -= 1
+	elif boundary == $boundaries/right:
+		boundary_collisions['right'] -= 1

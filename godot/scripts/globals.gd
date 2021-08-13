@@ -15,12 +15,6 @@ const LINEAR_DELTA = 4 # change in pixels - used for linear translations
 const ANGULAR_DELTA = 5  # change in degrees - used for rotational actions
 const SCALE_DELTA = Vector2(0.1, 0.1) # change in scale - used for zooming operations
 
-# for translation operations
-const MIN_X = -1000.0
-const MAX_X = 1000.0
-const MIN_Y = -1000.0
-const MAX_Y = 1000.0
-
 # for scaling operations
 const MIN_SCALE = Vector2(0.65, 0.65)
 const MAX_SCALE = Vector2(1.4, 1.4)
@@ -531,3 +525,27 @@ func get_object(shape, id):
 		_: print('unrecognized shape: ', shape)
 			
 	return object
+
+
+func cardinality(shape):
+	var n = 0
+	match shape:
+		SHAPES.MONOMINOS: n = N_MONOMINOS
+		SHAPES.DOMINOS: n = N_DOMINOS
+		SHAPES.TROMINOS: n = N_TROMINOS
+		SHAPES.TETROMINOS: n = N_TETROMINOS
+		SHAPES.PENTOMINOS: n = N_PENTOMINOS
+		
+		_: print('unrecognized shape: ', shape)
+		
+	return n
+
+
+func get_all_objects_for_shape(shape):
+	var shapes = []
+	for id in range(cardinality(shape)):
+		shapes.append(get_object(shape, id))
+		
+	return shapes
+
+
