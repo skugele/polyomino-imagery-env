@@ -8,6 +8,8 @@ onready var pending_actions = []
 # only a single piece can be active at one time
 onready var active_object = null
 
+# timer for state (e.g., screenshot) publication to clients
+var publish_timer = Timer.new()
 
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
@@ -46,8 +48,10 @@ func _ready():
 	gab.connect(gab_options)
 
 	# initializes a timer that controls the frequency of environment state broadcasts
-	_create_publish_timer(Globals.PUBLISH_NO_CHANGE_TIMEOUT)
-
+	publish_timer.wait_time = Globals.PUBLISH_NO_CHANGE_TIMEOUT
+	publish_timer.connect("timeout", self, "_on_publish_state")
+	add_child(publish_timer)
+	
 
 func _input(event):	
 	if event.is_action_pressed("ui_up"):
@@ -70,15 +74,6 @@ func _input(event):
 		add_action('next_shape')
 
 
-func _create_publish_timer(wait_time):
-	var publish_timer = Timer.new()
-
-	publish_timer.wait_time = wait_time  
-	publish_timer.connect("timeout", self, "_on_publish_state")
-	add_child(publish_timer)
-	publish_timer.start()
-
-
 # removes and executes the oldest pending action from the queue (if one exists)
 func _process(_delta):	
 	if unpublished_change:
@@ -93,8 +88,18 @@ func _process(_delta):
 	else:
 		var action = pending_actions.pop_front()
 		if action:
+			
+			# activity - stop time-based publication
+			if not publish_timer.is_stopped():
+				publish_timer.stop()
+				
 			execute(action)
 			unpublished_change = true
+		else:
+			
+			# inactivity - begin time-based publication
+			if publish_timer.is_stopped():
+				publish_timer.start()
 
 
 # adds an action to the agent's pending_actions queue for later execution
@@ -121,16 +126,57 @@ func execute(action):
 
 func execute_next_shape():
 	var id = 0
+	
+	# pentominos specific
 	if active_object != null:
 		id = (active_object.id + 1) % Globals.N_PENTOMINOS
 		remove_child(active_object)
-	
+
 	active_object = Globals.get_object(Globals.SHAPES.PENTOMINOS, id)
 	active_object.global_position = $centroid.global_position
-	
+
 	add_child(active_object)
 
-
+	# tetrominos specific
+#	if active_object != null:
+#		id = (active_object.id + 1) % Globals.N_TETROMINOS
+#		remove_child(active_object)
+#
+#	active_object = Globals.get_object(Globals.SHAPES.TETROMINOS, id)
+#	active_object.global_position = $centroid.global_position
+#
+#	add_child(active_object)
+	
+	# trominos specific
+#	if active_object != null:
+#		id = (active_object.id + 1) % Globals.N_TROMINOS
+#		remove_child(active_object)
+#
+#	active_object = Globals.get_object(Globals.SHAPES.TROMINOS, id)
+#	active_object.global_position = $centroid.global_position
+#
+#	add_child(active_object)
+	
+	# dominos specific
+#	if active_object != null:
+#		id = (active_object.id + 1) % Globals.N_DOMINOS
+#		remove_child(active_object)
+#
+#	active_object = Globals.get_object(Globals.SHAPES.DOMINOS, id)
+#	active_object.global_position = $centroid.global_position
+#
+#	add_child(active_object)
+	
+	# monominos specific
+#	if active_object != null:
+#		id = (active_object.id + 1) % Globals.N_MONOMINOS
+#		remove_child(active_object)
+#
+#	active_object = Globals.get_object(Globals.SHAPES.MONOMINOS, id)
+#	active_object.global_position = $centroid.global_position
+#
+#	add_child(active_object)
+	
 func execute_translation(action):
 	if active_object == null:
 		return
