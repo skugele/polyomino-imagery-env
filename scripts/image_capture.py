@@ -13,6 +13,7 @@ import os
 import zmq  # Python Bindings for ZeroMq (PyZMQ)
 import numpy as np
 
+from pathlib import Path
 from PIL import Image  # Python Imaging Library
 
 DEFAULT_TIMEOUT = 5000  # in milliseconds
@@ -23,8 +24,8 @@ DEFAULT_PORT = 10001
 # by default, receives all published messages (i.e., all topics accepted)
 MSG_TOPIC_FILTER = ''
 
-IMAGES_DIRECTORY = 'D:/Data/polyomino-experiment/images'
-
+IMAGE_DIRECTORY = 'D:/Data/polyomino-experiment/images'
+IMAGE_DIMENSIONS = (128, 128)
 
 def parse_args():
     """ Parses command line arguments. """
@@ -83,15 +84,26 @@ def get_screenshot(payload):
     screenshot = np.array(payload['data']['screenshot'])
     return screenshot
 
-def get_screenshot_filename(payload, extension):
-    return f'{IMAGES_DIRECTORY}/polyomino_{extract_time(payload)}.{extension}'
 
-def save_screenshot(data, filename):
+def get_screenshot_filepath(payload, extension):
+    data = payload["data"]
+    path = Path(f'{IMAGE_DIRECTORY}/{data["shape"]}/{data["id"]}')
+    filename = f'polyomino_{extract_time(payload)}.{extension}'
+    return path / filename
+
+
+def save_screenshot(data, filepath):
     array = np.array(data, dtype=np.uint8)
-    array = np.reshape(array, (128, 128))
+    array = np.reshape(array, IMAGE_DIMENSIONS)
 
     img = Image.fromarray(array, mode='L')
-    img.save(filename)
+
+    parent_dir = filepath.parent
+    if not parent_dir.exists():
+        print('creating path: ', str(parent_dir))
+        parent_dir.mkdir(parents=True)
+
+    img.save(filepath)
 
 
 if __name__ == "__main__":
@@ -103,10 +115,11 @@ if __name__ == "__main__":
             topic, payload = receive(connection)
 
             screenshot = get_screenshot(payload)
-            filename = get_screenshot_filename(payload, 'png')
-            save_screenshot(screenshot, filename)
+            filepath = get_screenshot_filepath(payload, 'png')
+            print('path: ', filepath)
+            save_screenshot(screenshot, filepath)
 
-            print(f'Image received: {payload["header"]}. Saved as {filename}.', flush=True)
+            print(f'Image received: {payload["header"]}. Saved as {filepath}.', flush=True)
 
     except KeyboardInterrupt:
 

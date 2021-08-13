@@ -6,11 +6,13 @@ const DEBUG_MODE = false
 const BOUNDARY_LAYER = 1
 const OBJECT_LAYER = 2
 
+const PUBLISH_NO_CHANGE_TIMEOUT = 10.0
+
 ##############################
 # action execution constants #
 ##############################
-const LINEAR_DELTA = 5 # change in pixels - used for linear translations
-const ANGULAR_DELTA = 5  # change in degrees - used for rotational actions
+const LINEAR_DELTA = 4 # change in pixels - used for linear translations
+const ANGULAR_DELTA = 6  # change in degrees - used for rotational actions
 const SCALE_DELTA = Vector2(0.1, 0.1) # change in scale - used for zooming operations
 
 # for translation operations
@@ -24,8 +26,9 @@ const MIN_SCALE = Vector2(0.65, 0.65)
 const MAX_SCALE = Vector2(1.4, 1.4)
 const DEFAULT_SCALE = Vector2(2.0, 2.0)
 
-const POLYOMINO_SCENE = preload("res://scenes/polyomino.tscn")
-enum SHAPES {TROMINOS, TETROMINOS, PENTOMINOS}
+enum SHAPES {TROMINOS = 1, 
+			 TETROMINOS, 
+			 PENTOMINOS}
 
 const N_PENTOMINOS = 18
 const N_TETROMINOS = 7
@@ -35,15 +38,24 @@ onready var _PENTOMINOS = []
 onready var _TETROMINOS = []
 onready var _TROMINOS = []
 
+const POLYOMINO_SCENE = preload("res://scenes/polyomino.tscn")
+
 func _ready():
+	_create_trominos()
+	_create_tetrominos()
 	_create_pentominos()
 	
+func _create_trominos():
+	pass
+	
+func _create_tetrominos():
+	pass
+	
 func _create_pentominos():
-	var Polyomino = preload("res://scenes/polyomino.tscn")
 	
 	# initialize polyominos
 	for p in range(N_PENTOMINOS):
-		var instance = Polyomino.instance()
+		var instance = POLYOMINO_SCENE.instance()
 		instance.id = p
 		instance.shape = SHAPES.PENTOMINOS
 		_PENTOMINOS.append(instance) 

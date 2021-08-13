@@ -33,6 +33,7 @@ onready var gab_options = {
 # state variable for tracking object-boundary collisions
 onready var boundary_collisions = 0
 
+onready var unpublished_change = true
 
 func _ready():
 
@@ -45,7 +46,7 @@ func _ready():
 	gab.connect(gab_options)
 
 	# initializes a timer that controls the frequency of environment state broadcasts
-	_create_publish_timer(1.0)
+	_create_publish_timer(Globals.PUBLISH_NO_CHANGE_TIMEOUT)
 
 
 func _input(event):	
@@ -79,8 +80,10 @@ func _create_publish_timer(wait_time):
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
-func _process(_delta):
-	
+func _process(_delta):	
+	if unpublished_change:
+		publish_state()
+			
 	# move active objects towards centroid in the event of a collision
 	if boundary_collisions > 0:
 		var curr_pos = active_object.global_position
@@ -91,6 +94,7 @@ func _process(_delta):
 		var action = pending_actions.pop_front()
 		if action:
 			execute(action)
+			unpublished_change = true
 
 
 # adds an action to the agent's pending_actions queue for later execution
@@ -183,14 +187,7 @@ func get_screenshot():
 	
 	return screenshot.get_data()
 
-
-#######################
-### SIGNAL HANDLERS ###
-#######################
-
-# signal handler for publish_timer's "timeout" signal
-func _on_publish_state():
-
+func publish_state():
 	var topic = '/polyomino-world/state'
 
 	var shape = null if (active_object == null) else active_object.shape
@@ -204,6 +201,17 @@ func _on_publish_state():
 
 	# broadcasts the message to all clients
 	gab.send(topic, msg)
+	
+	# TODO: Does this variable need to be synchronized???
+	unpublished_change = false
+
+#######################
+### SIGNAL HANDLERS ###
+#######################
+
+# signal handler for publish_timer's "timeout" signal
+func _on_publish_state():
+	publish_state()
 
 
 # signal handler for Godot-AI-Bridge's "event_requested" signal

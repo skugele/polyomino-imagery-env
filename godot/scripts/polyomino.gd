@@ -14,3 +14,4 @@ func _enter_tree():
 func copy(other):
 	id = other.id
 	on_positions = other.on_positions.duplicate()
+	shape = other.shape
