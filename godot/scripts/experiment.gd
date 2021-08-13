@@ -106,11 +106,12 @@ func _process(_delta):
 	if unpublished_change:
 		publish_state()
 			
-	# move active objects towards centroid in the event of a collision
+	# take corrective actions if boundary collisions occurred due to previous updates
 	if has_collision():
 		if Globals.DEBUG_MODE:
 			print('handling collisions!')
 		
+		# calculate a movement direction based on the boundaries with collisions
 		var corrective_dir = Vector2(0, 0)
 
 		for boundary in get_colliding_boundaries():
@@ -122,7 +123,7 @@ func _process(_delta):
 				
 				_: print('unknown boundary: ', boundary)
 				
-		active_object.global_position += corrective_dir 
+		active_object.global_position += corrective_dir
 		
 	else:
 		var action = pending_actions.pop_front()
