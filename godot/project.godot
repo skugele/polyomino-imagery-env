@@ -24,9 +24,9 @@ Globals="*res://scripts/globals.gd"
 
 [display]
 
-window/size/width=128
+window/size/width=256
 window/size/height=128
-window/size/resizable=false
+window/size/always_on_top=true
 
 [input]
 

@@ -9,37 +9,69 @@
 position = Vector2( 2, 0 )
 script = ExtResource( 1 )
 
-[node name="boundaries" type="Node" parent="."]
+[node name="GabLib" type="Node" parent="."]
+script = ExtResource( 2 )
 
-[node name="top" parent="boundaries" instance=ExtResource( 3 )]
+[node name="viewport_controller" type="Control" parent="."]
+margin_right = 128.0
+margin_bottom = 128.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="left_viewport_container" type="ViewportContainer" parent="viewport_controller"]
+margin_right = 128.0
+margin_bottom = 128.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="left_viewport" type="Viewport" parent="viewport_controller/left_viewport_container"]
+size = Vector2( 128, 128 )
+handle_input_locally = false
+render_target_update_mode = 3
+
+[node name="right_viewport_container" type="ViewportContainer" parent="viewport_controller"]
+margin_left = 129.0
+margin_right = 257.0
+margin_bottom = 128.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="right_viewport" type="Viewport" parent="viewport_controller/right_viewport_container"]
+size = Vector2( 128, 128 )
+handle_input_locally = false
+render_target_update_mode = 3
+
+[node name="boundaries" type="Node" parent="viewport_controller/right_viewport_container/right_viewport"]
+
+[node name="top" parent="viewport_controller/right_viewport_container/right_viewport/boundaries" instance=ExtResource( 3 )]
 position = Vector2( 0, 4 )
 
-[node name="bottom" parent="boundaries" instance=ExtResource( 3 )]
+[node name="bottom" parent="viewport_controller/right_viewport_container/right_viewport/boundaries" instance=ExtResource( 3 )]
 position = Vector2( 0, 124 )
 
-[node name="left" parent="boundaries" instance=ExtResource( 3 )]
+[node name="left" parent="viewport_controller/right_viewport_container/right_viewport/boundaries" instance=ExtResource( 3 )]
 position = Vector2( 4, 0 )
 rotation = 1.5708
 
-[node name="right" parent="boundaries" instance=ExtResource( 3 )]
+[node name="right" parent="viewport_controller/right_viewport_container/right_viewport/boundaries" instance=ExtResource( 3 )]
 position = Vector2( 124, 0 )
 rotation = 1.5708
 
-[node name="centroid" type="Sprite" parent="."]
+[node name="centroid" type="Sprite" parent="viewport_controller/right_viewport_container/right_viewport"]
 visible = false
 modulate = Color( 0.290196, 1, 0, 1 )
-position = Vector2( 64, 64 )
+position = Vector2( 66, 64 )
 scale = Vector2( 0.25, 0.25 )
 texture = ExtResource( 4 )
-
-[node name="GabLib" type="Node" parent="."]
-script = ExtResource( 2 )
-[connection signal="boundary_entered" from="boundaries/top" to="." method="_on_boundary_entered"]
-[connection signal="boundary_exited" from="boundaries/top" to="." method="_on_boundary_exited"]
-[connection signal="boundary_entered" from="boundaries/bottom" to="." method="_on_boundary_entered"]
-[connection signal="boundary_exited" from="boundaries/bottom" to="." method="_on_boundary_exited"]
-[connection signal="boundary_entered" from="boundaries/left" to="." method="_on_boundary_entered"]
-[connection signal="boundary_exited" from="boundaries/left" to="." method="_on_boundary_exited"]
-[connection signal="boundary_entered" from="boundaries/right" to="." method="_on_boundary_entered"]
-[connection signal="boundary_exited" from="boundaries/right" to="." method="_on_boundary_exited"]
 [connection signal="event_requested" from="GabLib" to="." method="_on_event_requested"]
+[connection signal="boundary_entered" from="viewport_controller/right_viewport_container/right_viewport/boundaries/top" to="." method="_on_boundary_entered"]
+[connection signal="boundary_exited" from="viewport_controller/right_viewport_container/right_viewport/boundaries/top" to="." method="_on_boundary_exited"]
+[connection signal="boundary_entered" from="viewport_controller/right_viewport_container/right_viewport/boundaries/bottom" to="." method="_on_boundary_entered"]
+[connection signal="boundary_exited" from="viewport_controller/right_viewport_container/right_viewport/boundaries/bottom" to="." method="_on_boundary_exited"]
+[connection signal="boundary_entered" from="viewport_controller/right_viewport_container/right_viewport/boundaries/left" to="." method="_on_boundary_entered"]
+[connection signal="boundary_exited" from="viewport_controller/right_viewport_container/right_viewport/boundaries/left" to="." method="_on_boundary_exited"]
+[connection signal="boundary_entered" from="viewport_controller/right_viewport_container/right_viewport/boundaries/right" to="." method="_on_boundary_entered"]
+[connection signal="boundary_exited" from="viewport_controller/right_viewport_container/right_viewport/boundaries/right" to="." method="_on_boundary_exited"]

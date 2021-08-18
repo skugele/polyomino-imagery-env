@@ -13,7 +13,10 @@ onready var pending_actions = []
 # state variable for tracking object-boundary collisions
 onready var boundary_collisions = {'top': 0,  'bottom': 0, 'left': 0, 'right': 0}
 
-# only a single piece can be active at one time
+# the reference object (left viewport)
+onready var ref_object = null
+
+# the active object (right viewport)
 onready var active_object = null
 
 # stores dictionary elements that identify the shape and id for polyominos. the order of these elements
@@ -29,6 +32,22 @@ var publish_timer = Timer.new()
 
 # used to preemptively publish a state change ahead of publish_timer timeout
 onready var unpublished_change = true
+
+
+########################
+# Child Node Variables #
+########################
+
+onready var left_viewport = $viewport_controller/left_viewport_container/left_viewport
+onready var right_viewport = $viewport_controller/right_viewport_container/right_viewport
+
+onready var centroid = $viewport_controller/right_viewport_container/right_viewport/centroid
+
+onready var top_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/top
+onready var bottom_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/bottom
+onready var left_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/left
+onready var right_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/right
+
 
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
@@ -181,12 +200,31 @@ func execute(action):
 		_: print('unrecogized action: ', action)
 
 
+# FIXME: This function needs to be improved
+func randomize_object(obj):
+	
+	# FIXME: all of these should be in multiples of legal actions
+	obj.rotation = (1 - randf()) * 360.0
+	
+	var scale_step = randf()	
+	obj.scale = Globals.MIN_SCALE * scale_step + Vector2(1.1, 1.1) * (1 - scale_step)
+	
+	var step_x = randf()
+	var step_y = randf()
+	
+	# TODO: Need constants for the screen dimensions
+	obj.global_position = Vector2(30 * step_x + 98 * (1 - step_x),
+								  30 * step_y + 98 * (1 - step_y))
+
+
 func execute_next_shape():
+	
+	var same = randi() % 2
 
 	# remove last polyomino from scene
-	if active_object != null:
-		remove_child(active_object)
-		active_object = null
+	if ref_object != null:
+		left_viewport.remove_child(ref_object)
+		ref_object = null
 			
 	# retrieve configuration details needed to create next polyomino object
 	var config = polyomino_configs.pop_front()
@@ -198,10 +236,34 @@ func execute_next_shape():
 	# create a new polyomino based on config and add to the scene
 	else:
 		var new_object = Globals.get_object(config['shape'], config['id'])
-		new_object.global_position = $centroid.global_position
+		new_object.global_position = centroid.global_position
 			
-		add_child(new_object)
+		left_viewport.add_child(new_object)
+		ref_object = new_object
+
+
+	# remove last polyomino from scene
+	if active_object != null:
+		right_viewport.remove_child(active_object)
+		active_object = null
+			
+	# retrieve configuration details needed to create next polyomino object
+	if not same:
+		config = polyomino_configs.pop_front()
+	
+	# reinitialize configs if last element has been removed
+	if config == null:
+		initialize_polyomino_configs()
+
+	# create a new polyomino based on config and add to the scene
+	else:
+		var new_object = Globals.get_object(config['shape'], config['id'])
+		new_object.global_position = centroid.global_position
+			
+		right_viewport.add_child(new_object)
 		active_object = new_object
+		
+		randomize_object(active_object)
 
 
 func execute_translation(action):
@@ -302,13 +364,13 @@ func _on_boundary_entered(boundary):
 	if Globals.DEBUG_MODE:
 		print('boundary entered: ', boundary)
 	
-	if boundary == $boundaries/top:
+	if boundary == top_boundary:
 		boundary_collisions['top'] += 1
-	elif boundary == $boundaries/bottom:
+	elif boundary == bottom_boundary:
 		boundary_collisions['bottom'] += 1
-	elif boundary == $boundaries/left:
+	elif boundary == left_boundary:
 		boundary_collisions['left'] += 1
-	elif boundary == $boundaries/right:
+	elif boundary == right_boundary:
 		boundary_collisions['right'] += 1
 
 
@@ -316,11 +378,11 @@ func _on_boundary_exited(boundary):
 	if Globals.DEBUG_MODE:
 		print('boundary exited: ', boundary)
 		
-	if boundary == $boundaries/top:
+	if boundary == top_boundary:
 		boundary_collisions['top'] -= 1
-	elif boundary == $boundaries/bottom:
+	elif boundary == bottom_boundary:
 		boundary_collisions['bottom'] -= 1
-	elif boundary == $boundaries/left:
+	elif boundary == left_boundary:
 		boundary_collisions['left'] -= 1
-	elif boundary == $boundaries/right:
+	elif boundary == right_boundary:
 		boundary_collisions['right'] -= 1

@@ -1,6 +1,6 @@
 extends Node
 
-const DEBUG_MODE = false
+const DEBUG_MODE = true
 
 # layer bitmask values
 const BOUNDARY_LAYER = 1
