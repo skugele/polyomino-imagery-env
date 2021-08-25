@@ -15,4 +15,7 @@ venv/
 # PyCharm
 .idea
 
+# Jupyter notebooks
+.ipynb_checkpoints
+
 
