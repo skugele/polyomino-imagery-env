@@ -1,2 +1,2 @@
-model_checkpoint_path: "cvae-poly-latent-8"
-all_model_checkpoint_paths: "cvae-poly-latent-8"
+model_checkpoint_path: "cvae-poly-latent-128-with-augment-no-beta"
+all_model_checkpoint_paths: "cvae-poly-latent-128-with-augment-no-beta"
