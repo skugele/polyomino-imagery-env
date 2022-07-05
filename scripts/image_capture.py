@@ -1,22 +1,14 @@
-#
-# Godot AI Bridge (GAB) - DEMO Environment State Listener.
-#
-# Description: Used to receive agent state information from DEMO environment via CLI
-# Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
-#
-
-import json
 import argparse
-import sys
+import json
 import os
-
-import zmq  # Python Bindings for ZeroMq (PyZMQ)
-import numpy as np
-
+import sys
 from pathlib import Path
+
+import numpy as np
+import zmq  # Python Bindings for ZeroMq (PyZMQ)
 from PIL import Image  # Python Imaging Library
 
-DEFAULT_TIMEOUT = 5000  # in milliseconds
+DEFAULT_TIMEOUT = 15000  # in milliseconds
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10001
@@ -24,8 +16,9 @@ DEFAULT_PORT = 10001
 # by default, receives all published messages (i.e., all topics accepted)
 MSG_TOPIC_FILTER = ''
 
-IMAGE_DIRECTORY = 'D:/Data/polyomino-experiment/images'
+IMAGE_DIRECTORY = Path('local/save/images')
 IMAGE_DIMENSIONS = (128, 128)
+
 
 def parse_args():
     """ Parses command line arguments. """
@@ -80,15 +73,16 @@ def extract_time(payload):
     return payload['header']['time']
 
 
-def get_screenshot(payload):
-    screenshot = np.array(payload['data']['screenshot'])
-    return screenshot
+def get_screenshot(viewport_data):
+    return np.array(viewport_data['screenshot'])
 
 
-def get_screenshot_filepath(payload, extension):
-    data = payload["data"]
-    path = Path(f'{IMAGE_DIRECTORY}/{data["shape"]}/{data["id"]}')
+def get_screenshot_filepath(viewport_data, extension):
+    shape, id = viewport_data["shape"], viewport_data["id"]
+
+    path = Path(f'{IMAGE_DIRECTORY}/{shape}/{id}')
     filename = f'polyomino_{extract_time(payload)}.{extension}'
+
     return path / filename
 
 
@@ -106,7 +100,7 @@ def save_screenshot(data, filepath):
     img.save(filepath)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     try:
         args = parse_args()
         connection = connect(host=args.host, port=args.port)
@@ -114,12 +108,17 @@ if __name__ == "__main__":
         while True:
             topic, payload = receive(connection)
 
-            screenshot = get_screenshot(payload)
-            filepath = get_screenshot_filepath(payload, 'png')
-            print('path: ', filepath)
-            save_screenshot(screenshot, filepath)
+            if payload:
+                viewport_data = payload['data']['right_viewport']
 
-            print(f'Image received: {payload["header"]}. Saved as {filepath}.', flush=True)
+                filepath = get_screenshot_filepath(viewport_data, 'png')
+
+                print('path: ', filepath)
+
+                screenshot = get_screenshot(viewport_data)
+                save_screenshot(screenshot, filepath)
+
+                print(f'Image received: {payload["header"]}. Saved as {filepath}.', flush=True)
 
     except KeyboardInterrupt:
 

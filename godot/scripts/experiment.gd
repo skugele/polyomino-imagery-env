@@ -67,7 +67,7 @@ onready var gab_options = {
 	},
 
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 4   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+	'verbosity': 2   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
 
@@ -311,8 +311,8 @@ func execute_zoom(action):
 		
 	active_object.scale = new_scale
 
-func get_screenshot():
-	var screenshot = get_viewport().get_texture().get_data()
+func get_screenshot(viewport):
+	var screenshot = viewport.get_texture().get_data()
 
 	# the viewport data is vertically flipped. this is a workaround.
 	screenshot.flip_y()
@@ -322,19 +322,29 @@ func get_screenshot():
 	
 	return screenshot.get_data()
 
-func publish_state():
-	var topic = '/polyomino-world/state'
-
-	var shape = null if (active_object == null) else active_object.shape
-	var id = null if (active_object == null) else active_object.id
+func get_state_msg_for_viewport(viewport, object):
+	var shape = null if (object == null) else object.shape
+	var id = null if (object == null) else object.id
 	
-	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages are also
-	# given a "header" element containing a unique sequence numbers (seqno) and timestamp in milliseconds
-	var msg = {'shape' : shape,
-			   'id' : id,
-			   'screenshot' : get_screenshot()}
-
-	# broadcasts the message to all clients
+	var screenshot = get_screenshot(viewport)
+	
+	return {
+		'shape' : shape,
+		'id' : id,
+		'screenshot' : screenshot
+	}
+	
+func publish_state():
+	# TODO: move this into a global variable
+	var topic = '/polyomino-world/state'
+	var msg = {
+		'left_viewport': get_state_msg_for_viewport(left_viewport, ref_object),
+		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
+	}
+	
+	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages 
+	# are also given a "header" element containing a unique sequence numbers (seqno) and timestamp 
+	# in milliseconds
 	gab.send(topic, msg)
 	
 	# TODO: Does this variable need to be synchronized???
