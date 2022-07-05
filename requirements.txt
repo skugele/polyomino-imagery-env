@@ -6,3 +6,4 @@ pyzmq
 seaborn
 sklearn
 tensorflow==2.6.0
+tensorflow-addons
