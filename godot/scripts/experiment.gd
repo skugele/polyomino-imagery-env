@@ -9,6 +9,7 @@ extends Node2D
 
 # a queue of actions that are pending execution
 onready var pending_actions = []
+onready var last_action_seqno = -1
 
 # state variable for tracking object-boundary collisions
 onready var boundary_collisions = {'top': 0,  'bottom': 0, 'left': 0, 'right': 0}
@@ -67,7 +68,7 @@ onready var gab_options = {
 	},
 
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 2   # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+	'verbosity': 3  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
 
@@ -101,23 +102,32 @@ func initialize_polyomino_configs():
 
 func _input(event):	
 	if event.is_action_pressed("ui_up"):
-		add_action('up')
+		last_action_seqno += 1
+		add_action('up', last_action_seqno)
 	elif event.is_action_pressed("ui_down"):
-		add_action('down')
+		last_action_seqno += 1
+		add_action('down', last_action_seqno)
 	elif event.is_action_pressed("ui_left"):
-		add_action('left')
+		last_action_seqno += 1
+		add_action('left', last_action_seqno)
 	elif event.is_action_pressed("ui_right"):
-		add_action('right')
+		last_action_seqno += 1
+		add_action('right', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_clockwise"):
-		add_action('rotate_clockwise')
+		last_action_seqno += 1
+		add_action('rotate_clockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_counterclockwise"):
-		add_action('rotate_counterclockwise')
+		last_action_seqno += 1
+		add_action('rotate_counterclockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_in"):
-		add_action('zoom_in')
+		last_action_seqno += 1
+		add_action('zoom_in', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_out"):
-		add_action('zoom_out')
+		last_action_seqno += 1		
+		add_action('zoom_out', last_action_seqno)
 	elif event.is_action_pressed("ui_next_shape"):
-		add_action('next_shape')
+		last_action_seqno += 1		
+		add_action('next_shape', last_action_seqno)
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -145,17 +155,16 @@ func _process(_delta):
 		active_object.global_position += corrective_dir
 		
 	else:
-		var action = pending_actions.pop_front()
-		if action:
-			
+		var pending_action = pending_actions.pop_back()
+		if pending_action:
 			# activity - stop time-based publication
 			if not publish_timer.is_stopped():
 				publish_timer.stop()
 				
-			execute(action)
+			execute(pending_action['action'])
+			last_action_seqno = pending_action['seqno']
 			unpublished_change = true
 		else:
-			
 			# inactivity - begin time-based publication
 			if publish_timer.is_stopped():
 				publish_timer.start()
@@ -179,11 +188,15 @@ func get_colliding_boundaries():
 
 
 # adds an action to the agent's pending_actions queue for later execution
-func add_action(action):
+func add_action(action, seqno):	
 	if Globals.DEBUG_MODE:
 		print('adding action: ', action)
-		
-	pending_actions.push_back(action)
+	
+	if len(pending_actions) > Globals.MAX_PENDING_ACTIONS:
+		var dropped_actions = pending_actions.pop_back()
+		print('Max queue depth reached. Dropping oldest pending action with value %s.' % dropped_actions)
+	
+	pending_actions.push_front({'seqno': seqno, 'action': action})
 
 
 func execute(action):
@@ -340,6 +353,7 @@ func publish_state():
 	var msg = {
 		'left_viewport': get_state_msg_for_viewport(left_viewport, ref_object),
 		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
+		'last_action_seqno': self.last_action_seqno
 	}
 	
 	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages 
@@ -365,8 +379,13 @@ func _on_event_requested(event_details):
 		print('Godot Environment: event request received -> "%s"' % event_details)
 	
 	var event = event_details['data']['event']
+	var header = event_details['header']
+	
 	if event['type'] == 'action':
-		add_action(event['value'])
+		var seqno = header['seqno']
+		var action = event['value']
+		
+		add_action(action, seqno)
 
 
 # signal handler for boundary collisions

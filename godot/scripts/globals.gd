@@ -1,12 +1,12 @@
 extends Node
 
-const DEBUG_MODE = true
+const DEBUG_MODE = false
 
 # layer bitmask values
 const BOUNDARY_LAYER = 1
 const OBJECT_LAYER = 2
 
-const PUBLISH_NO_CHANGE_TIMEOUT = 10.0
+const PUBLISH_NO_CHANGE_TIMEOUT = 1.0
 
 ##############################
 # action execution constants #
@@ -14,6 +14,8 @@ const PUBLISH_NO_CHANGE_TIMEOUT = 10.0
 const LINEAR_DELTA = 4 # change in pixels - used for linear translations
 const ANGULAR_DELTA = 5  # change in degrees - used for rotational actions
 const SCALE_DELTA = Vector2(0.1, 0.1) # change in scale - used for zooming operations
+
+const MAX_PENDING_ACTIONS = 5
 
 # for scaling operations
 const MIN_SCALE = Vector2(0.65, 0.65)
