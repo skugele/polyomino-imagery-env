@@ -52,7 +52,6 @@ func _create_monominos():
 	instance.shape = SHAPES.MONOMINOS
 	_MONOMINOS.append(instance) 
 
-
 	#################
 	#    0 1 2 3 4  #
 	#  0            # 
@@ -69,8 +68,8 @@ func _create_dominos():
 	var instance = POLYOMINO_SCENE.instance()
 	instance.id = 0
 	instance.shape = SHAPES.DOMINOS
+	
 	_DOMINOS.append(instance) 
-
 
 	#################
 	#    0 1 2 3 4  #

@@ -3,6 +3,8 @@
 extends Node2D
 
 
+onready var rng = RandomNumberGenerator.new()
+
 ###############################
 # Environment State Variables #
 ###############################
@@ -73,6 +75,8 @@ onready var gab_options = {
 
 
 func _ready():
+	
+	rng.randomize()
 
 	# this line was added to remove extra "border" lines appearing in screenshots. 
 	# screenshot dimensions were 130x128!
@@ -213,71 +217,93 @@ func execute(action):
 		_: print('unrecogized action: ', action)
 
 
-# FIXME: This function needs to be improved
-func randomize_object(obj):
-	
-	# FIXME: all of these should be in multiples of legal actions
-	obj.rotation = (1 - randf()) * 360.0
-	
-	var scale_step = randf()	
-	obj.scale = Globals.MIN_SCALE * scale_step + Vector2(1.1, 1.1) * (1 - scale_step)
-	
-	var step_x = randf()
-	var step_y = randf()
+func get_random_position():
+	var step_x = rng.randf()
+	var step_y = rng.randf()
 	
 	# TODO: Need constants for the screen dimensions
-	obj.global_position = Vector2(30 * step_x + 98 * (1 - step_x),
-								  30 * step_y + 98 * (1 - step_y))
-
-
-func execute_next_shape():
+	var min_step = 50
+	var max_step = 85
 	
-	var same = randi() % 2
+	var position = Vector2(min_step * step_x + max_step * (1 - step_x),
+						   min_step * step_y + max_step * (1 - step_y))
+						
+	return position
+	
 
+func get_random_scale():
+	var scale_step = rng.randf()
+	return Globals.MIN_SCALE * scale_step + Vector2(1.1, 1.1) * (1 - scale_step)
+
+
+func get_random_rotation():
+	var n_rotations = rng.randi_range(1, int(360.0 / Globals.ANGULAR_DELTA))
+	return n_rotations * Globals.ANGULAR_DELTA
+	
+
+func randomize_object(obj):
+	obj.rotation = get_random_rotation()
+	obj.scale = get_random_scale()
+	obj.global_position = get_random_position()
+
+
+func generate_image(config):
+	var new_object = Globals.get_object(config['shape'], config['id'])
+	new_object.global_position = centroid.global_position
+		
+	return new_object
+	
+	
+func update_ref_image(new_object):
 	# remove last polyomino from scene
 	if ref_object != null:
 		left_viewport.remove_child(ref_object)
 		ref_object = null
-			
-	# retrieve configuration details needed to create next polyomino object
-	var config = polyomino_configs.pop_front()
 	
-	# reinitialize configs if last element has been removed
-	if config == null:
-		initialize_polyomino_configs()
-
-	# create a new polyomino based on config and add to the scene
-	else:
-		var new_object = Globals.get_object(config['shape'], config['id'])
-		new_object.global_position = centroid.global_position
-			
-		left_viewport.add_child(new_object)
-		ref_object = new_object
-
-
+	left_viewport.add_child(new_object)
+	ref_object = new_object
+	
+	
+func update_active_image(new_object):
 	# remove last polyomino from scene
 	if active_object != null:
 		right_viewport.remove_child(active_object)
 		active_object = null
 			
-	# retrieve configuration details needed to create next polyomino object
-	if not same:
-		config = polyomino_configs.pop_front()
+	right_viewport.add_child(new_object)
+	active_object = new_object
+
 	
-	# reinitialize configs if last element has been removed
-	if config == null:
-		initialize_polyomino_configs()
-
-	# create a new polyomino based on config and add to the scene
+func get_random_config(with_replacement=true):
+	var index = rng.randi_range(0, polyomino_configs.size() - 1)
+	var config = null
+	if with_replacement:
+		config = polyomino_configs[index]
 	else:
-		var new_object = Globals.get_object(config['shape'], config['id'])
-		new_object.global_position = centroid.global_position
-			
-		right_viewport.add_child(new_object)
-		active_object = new_object
-		
-		randomize_object(active_object)
+		config = polyomino_configs.pop_left()
+	return config
+	
+	
+func execute_next_shape():
+	var same = rng.randi() % 2 == 0
 
+	# retrieve configuration details needed to create next polyomino object
+	var ref_config = get_random_config()
+	
+	var active_config = null
+	if same:
+		active_config = ref_config
+	else:
+		active_config = get_random_config()
+	
+	var new_ref_image = generate_image(ref_config)
+	var new_active_image = generate_image(active_config)
+		
+	update_ref_image(new_ref_image)
+	update_active_image(new_active_image)
+	
+	randomize_object(active_object)
+	
 
 func execute_translation(action):
 	if active_object == null:
