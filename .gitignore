@@ -131,6 +131,10 @@ dmypy.json
 # IDEs
 .idea/
 
+# Godot
+.import/
+*.import
+
 # Local Only Files
 local/
 .run/
