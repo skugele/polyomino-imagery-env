@@ -1,10 +1,9 @@
 #
-# Godot AI Bridge (GAB) - DEMO Environment Action Client.
+# Polyomino Imagery Environment Action Client
 #
-# Description: Used to submit movement and rotation actions to the agent in the DEMO environment via CLI
+# Description: Used to submit commands (actions) to the Polyomino Imagery Environment
 # Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
-
 import json
 import argparse
 import sys
@@ -39,7 +38,7 @@ def parse_args():
 
     :return: argparse parser with parsed command line args
     """
-    parser = argparse.ArgumentParser(description='Godot AI Bridge (GAB) - DEMO Environment Action Client')
+    parser = argparse.ArgumentParser(description='Polyomino Imagery Environment - Action Client')
 
     parser.add_argument('--id', type=int, required=False, default=DEFAULT_AGENT,
                         help=f'the id of the agent to which this action will be sent (default: {DEFAULT_AGENT})')

@@ -1,7 +1,7 @@
 #
-# Godot AI Bridge (GAB) - DEMO Environment State Listener.
+# Polyomino Imagery Environment State Listener
 #
-# Description: Used to receive agent state information from DEMO environment via CLI
+# Description: Used to receive agent state information from Polyomino Imagery Environment
 # Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
 
