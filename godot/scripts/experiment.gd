@@ -359,7 +359,12 @@ func get_screenshot(viewport):
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
 	
-	return screenshot.get_data()
+	var byte_array = screenshot.get_data()
+	var pixel_data = []
+	for i in byte_array.size():
+		pixel_data.append(byte_array[i])
+	
+	return pixel_data
 
 func get_state_msg_for_viewport(viewport, object):
 	var shape = null if (object == null) else object.shape
