@@ -38,7 +38,8 @@ onready var unpublished_change = true
 
 
 # check if the shapes are same
-onready var same = false;
+onready var same = false
+onready var playMode = true
 
 
 ########################
@@ -136,6 +137,8 @@ func _input(event):
 	elif event.is_action_pressed("ui_next_shape"):
 		last_action_seqno += 1		
 		add_action('next_shape', last_action_seqno)
+	elif event.is_action_pressed("ui_toggle_playMode"):
+		toggle_play_mode()
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -311,7 +314,7 @@ func execute_next_shape():
 	
 
 func execute_translation(action):
-	if active_object == null:
+	if active_object == null || !playMode:
 		return
 		
 	match action:	
@@ -324,7 +327,7 @@ func execute_translation(action):
 		_: print('unrecogized translation: ', action)
 
 func execute_rotation(action):
-	if active_object == null:
+	if active_object == null || !playMode:
 		return
 		
 	match action:
@@ -336,7 +339,7 @@ func execute_rotation(action):
 
 
 func execute_zoom(action):
-	if active_object == null:
+	if active_object == null || !playMode:
 		return
 	
 	var new_scale = null
@@ -366,8 +369,8 @@ func get_screenshot(viewport):
 	
 	var byte_array = screenshot.get_data()
 	var pixel_data = []
-	for i in byte_array.size():
-		pixel_data.append(byte_array[i])
+	#for i in byte_array.size():
+	#	pixel_data.append(byte_array[i])
 	
 	return pixel_data
 
@@ -386,18 +389,26 @@ func get_state_msg_for_viewport(viewport, object):
 func execute_selection(action):
 	if active_object == null:
 		return
-
-	return {
-		"Result": same and "same" in action
-	}
 	
+	var is_correct = same if "same" in action else !same
+
+	gab.send("/polyomino/selection-result/", {
+		"result": is_correct
+	})
+	
+func toggle_play_mode():
+	# toggle playMode
+	playMode = !playMode
+
 func publish_state():
 	# TODO: move this into a global variable
 	var topic = '/polyomino-world/state'
 	var msg = {
 		'left_viewport': get_state_msg_for_viewport(left_viewport, ref_object),
 		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
-		'last_action_seqno': self.last_action_seqno
+		'last_action_seqno': self.last_action_seqno,
+		'same': same,
+		'playMode': playMode
 	}
 	
 	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages 
