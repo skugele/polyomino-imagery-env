@@ -37,6 +37,10 @@ var publish_timer = Timer.new()
 onready var unpublished_change = true
 
 
+# check if the shapes are same
+onready var same = false;
+
+
 ########################
 # Child Node Variables #
 ########################
@@ -212,6 +216,7 @@ func execute(action):
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
 		'zoom_in', 'zoom_out': execute_zoom(action)
 		'next_shape': execute_next_shape()
+		"select_same_shape", "select_different_shape": execute_selection(action)
 				
 		# default case: unrecognized action
 		_: print('unrecogized action: ', action)
@@ -285,7 +290,7 @@ func get_random_config(with_replacement=true):
 	
 	
 func execute_next_shape():
-	var same = rng.randi() % 2 == 0
+	same = rng.randi() % 2 == 0
 
 	# retrieve configuration details needed to create next polyomino object
 	var ref_config = get_random_config()
@@ -376,6 +381,14 @@ func get_state_msg_for_viewport(viewport, object):
 		'shape' : shape,
 		'id' : id,
 		'screenshot' : screenshot
+	}
+
+func execute_selection(action):
+	if active_object == null:
+		return
+
+	return {
+		"Result": same and "same" in action
 	}
 	
 func publish_state():
