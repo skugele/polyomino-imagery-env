@@ -65,7 +65,7 @@ def connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
     socket.connect(f'tcp://{host}:{str(port)}')
 
     # without timeout the process can hang indefinitely
-    socket.setsockopt(zmq.RCVTIMED, DEFAULT_TIMEOUT)
+    socket.setsockopt(zmq.RCVTIMEO, DEFAULT_TIMEOUT)
     return socket
 
 
