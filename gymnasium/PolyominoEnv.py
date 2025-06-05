@@ -45,6 +45,9 @@ class PolyominoEnvironment(gym.Env):
 
         self.seqno = 1
 
+        self.latest_reward = None
+        self.latest_env_state = None
+
         self._connect()
         self._listener_connect()
 
@@ -94,6 +97,22 @@ class PolyominoEnvironment(gym.Env):
                 return 1 if payload["result"] else -1
         return 0
 
+    def _get_environment_state(self, timeout_ms = 1000):
+        end_time = time.time() + (timeout_ms / 1000)
+        while time.time() < end_time:
+            pass
+
+    def _process_listener_msgs(self, timeout_ms = 1000):
+        end_time = time.time() + (timeout_ms / 1000)
+        while time.time() < end_time: 
+            pass
+            topic, payload = self._recv()
+            if "result" in topic:
+                self.latest_reward = 1 if payload["result"] else -1
+            elif "state" in topic:
+                self.latest_env_state = payload["data"]["screenshot"]
+
+
 
     def reset(self):
         super().reset()
@@ -109,10 +128,33 @@ class PolyominoEnvironment(gym.Env):
         response = self._send(data)
         assert(response['data']['status']=='SUCCESS')
 
-        reward = self._wait_for_reward() if action in [Actions.SELECT_SAME, Actions.SELECT_DIFFERENT] else 0
+        # wait for the responses
+        self._process_listener_msgs()
+
+        # terminated? what is the terminated state? when has the agent reached its goal
+
+        assert(self.latest_reward is not None and self.latest_env_state is not None)
+
+
+        reward = self.latest_reward if action in [Actions.SELECT_SAME, Actions.SELECT_DIFFERENT] else 0
+
+        observation = response
+        info = response
+        terminated = False
+        truncated = False
+
+        return observation, reward, terminated, truncated, info
 
 
 
 
     def close(self):
         pass
+
+
+"""
+environment_state: pixel data (screenshot)
+
+
+different approach to listener msgs.
+"""
