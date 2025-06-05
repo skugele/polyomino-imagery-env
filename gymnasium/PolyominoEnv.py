@@ -17,8 +17,6 @@ class Actions(Enum):
 
 class PolyominoEnvironment(gym.Env):
     def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = '5000', MSG_TIMEOUT_FILTER = ''):
-        super().__init__()
-
         self.ACTION_MAP = {
               'W': 'up',
               'S': 'down',
@@ -154,6 +152,8 @@ class PolyominoEnvironment(gym.Env):
 
 """
 environment_state: pixel data (screenshot)
+
+are the actions hidden to the agent based on the playMode?
 
 
 different approach to listener msgs.
