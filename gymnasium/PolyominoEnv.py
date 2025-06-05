@@ -53,7 +53,7 @@ class PolyominoEnvironment(gym.Env):
     def _connect(self):
         self.socket = zmq.Context().socket(zmq.REQ)
         self.socket.connect(f"tcp://{self.HOST}:{str(self.PORT)}")
-        self.setsocketopt(zmq.RCVTIMEO, self.TIMEOUT)
+        self.socket.setsocketopt(zmq.RCVTIMEO, self.TIMEOUT)
 
     def _listener_connect(self):
         self.listener = zmq.Context().socket(zmq.SUB)
@@ -114,7 +114,13 @@ class PolyominoEnvironment(gym.Env):
 
     def reset(self):
         super().reset()
-        self._send(Actions.NEXT_SHAPE)
+        data = {
+            'event': {
+                'type': 'action',
+                'value': self.ACTION_DESC[Actions.NEXT_SHAPE.value]
+            }
+        }
+        self._send(data)
 
     def step(self, action):
         data = {
