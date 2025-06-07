@@ -2,6 +2,7 @@ import gym
 import zmq, json, time
 from enum import Enum
 from itertools import cycle
+import numpy as np
 
 class Actions(Enum):
     UP = 0
@@ -125,6 +126,16 @@ class PolyominoEnvironment(gym.Env):
         self._send(data)
         self.current_timestep = 0
 
+        left, right = self.latest_env_state["state"]
+
+        left = np.array(left, dtype=np.float32)
+        right = np.array(right, dtype=np.float32)
+        observation = {
+            "left": left,
+            "right": right
+        }
+        return observation
+
     def step(self, action):
         self.current_timestep += 1
         data = {
@@ -150,9 +161,17 @@ class PolyominoEnvironment(gym.Env):
             reward = 10 if isCorrect else -10
         else:
             reward = -1  # or 0 depending on neutrality of non-selection moves
-       
+ 
 
-        observation = self.latest_env_state["state"]
+        left, right = self.latest_env_state["state"]
+
+        left = np.array(left, dtype=np.float32)
+        right = np.array(right, dtype=np.float32)
+        observation = {
+            "left": left,
+            "right": right
+        }      
+
         info = response
         terminated = self.MAX_TIMESTEPS <= self.current_timestep;
         truncated = False
