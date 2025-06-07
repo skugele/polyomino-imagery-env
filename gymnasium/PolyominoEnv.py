@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import zmq, json, time
 from enum import Enum
 from itertools import cycle
@@ -52,6 +52,11 @@ class PolyominoEnvironment(gym.Env):
 
         self.latest_env_state = None
 
+        self.observation_space = gym.spaces.Dict({
+            "left": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
+            "right": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
+        })
+
         self.context = zmq.Context()
         self._connect()
         self._listener_connect()
@@ -102,7 +107,7 @@ class PolyominoEnvironment(gym.Env):
 
         while time.time() < end_time:
             topic, payload = self._recv()
-            print(topic, payload)
+            # print(topic, payload)
             if "/state" in topic:
                 lastActionSeqNo = payload["data"]["last_action_seqno"]
                 if lastActionSeqNo >= seqNo:
@@ -116,7 +121,7 @@ class PolyominoEnvironment(gym.Env):
     def _check_selection(self, selected_same):
         return self.latest_env_state["isSame"] == selected_same
 
-    def reset(self):
+    def reset(self, seed=42):
         data = {
             'event': {
                 'type': 'action',
@@ -127,6 +132,7 @@ class PolyominoEnvironment(gym.Env):
         self.current_timestep = 0
 
         left, right = self.latest_env_state["state"]
+        print(len(left), len(right))
 
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
@@ -134,7 +140,8 @@ class PolyominoEnvironment(gym.Env):
             "left": left,
             "right": right
         }
-        return observation
+        info = {}
+        return (observation, info)
 
     def step(self, action):
         self.current_timestep += 1
@@ -152,7 +159,7 @@ class PolyominoEnvironment(gym.Env):
         # terminated? what is the terminated state? when has the agent reached its goal
 
 
-        print(self.latest_env_state)
+        # print(self.latest_env_state)
 
 
 
@@ -195,16 +202,35 @@ are the actions hidden to the agent based on the playMode?; currently agent can 
 different approach to listener msgs.: use sqn no to sync the data
 """
 
+#
+# def main():
+#     env = PolyominoEnvironment()
+#     actions = [8, 0, 9]
+#     actions = cycle(actions)
+#     while True:
+#         action = next(actions)
+#         obs, reward, term, trun, info =  env.step(action)
+#         print(action, reward)
+#         time.sleep(2)
+#
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.monitor import Monitor
 
 def main():
     env = PolyominoEnvironment()
-    actions = [8, 0, 9]
-    actions = cycle(actions)
+    env = Monitor(env)
+    check_env(env, warn=True)
+
+    model = PPO("MultiInputPolicy", env, verbose=1)
+    model.learn(total_timesteps=10000)
+
     while True:
-        action = next(actions)
-        obs, reward, term, trun, info =  env.step(action)
+        action, _ = model.predict(obs)
+        obs, reward, term, trun, info = env.step(action)
         print(action, reward)
-        time.sleep(2)
+        if term or trun:
+            obs = env.reset()
 
 if __name__ == "__main__":
     main()
