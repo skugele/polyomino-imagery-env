@@ -1,6 +1,7 @@
 import gym
 import zmq, json, time
 from enum import Enum
+from itertools import cycle
 
 class Actions(Enum):
     UP = 0
@@ -16,7 +17,7 @@ class Actions(Enum):
     SELECT_DIFFERENT = 10
 
 class PolyominoEnvironment(gym.Env):
-    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = '5000', MSG_TIMEOUT_FILTER = ''):
+    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000):
         self.ACTION_MAP = {
               'W': 'up',
               'S': 'down',
@@ -41,22 +42,27 @@ class PolyominoEnvironment(gym.Env):
         self.TIMEOUT = TIMEOUT
         self.MSG_TOPIC_FILTER = MSG_TIMEOUT_FILTER
 
+        self.MAX_TIMESTEPS = MAX_TIMESTEPS;
+        self.current_timestep = 0;
+
+        self.SELECTION_ACTIONS = [Actions.SELECT_SAME.value, Actions.SELECT_DIFFERENT.value]
+
         self.seqno = 1
 
-        self.latest_reward = None
         self.latest_env_state = None
 
+        self.context = zmq.Context()
         self._connect()
         self._listener_connect()
 
 
     def _connect(self):
-        self.socket = zmq.Context().socket(zmq.REQ)
-        self.socket.connect(f"tcp://{self.HOST}:{str(self.PORT)}")
-        self.socket.setsocketopt(zmq.RCVTIMEO, self.TIMEOUT)
+        self.socket = self.context.socket(zmq.REQ)
+        self.socket.connect(f"tcp://{self.HOST}:{self.PORT}")
+        self.socket.setsockopt(zmq.RCVTIMEO, self.TIMEOUT)
 
     def _listener_connect(self):
-        self.listener = zmq.Context().socket(zmq.SUB)
+        self.listener = self.context.socket(zmq.SUB)
         self.listener.setsockopt_string(zmq.SUBSCRIBE, self.MSG_TOPIC_FILTER)
         self.listener.setsockopt(zmq.RCVTIMEO, self.TIMEOUT)
         self.listener.connect(f"tcp://{self.HOST}:{str(self.LISTENER_PORT)}")
@@ -71,9 +77,11 @@ class PolyominoEnvironment(gym.Env):
 
 
     def _send(self, data):
+        self.seqno += 1
         request = self._create_request(data)
         encoded_req = json.dumps(request)
         self.socket.send_string(encoded_req)
+        self._wait_for_update(self.seqno)
         return self.socket.recv_json()
     
     def _recv(self):
@@ -87,39 +95,27 @@ class PolyominoEnvironment(gym.Env):
 
         return topic, payload
         
-    def _wait_for_reward(self, timeout_ms = 1000):
+
+    def _wait_for_update(self, seqNo, timeout_ms=5000):
         end_time = time.time() + (timeout_ms / 1000)
+
         while time.time() < end_time:
             topic, payload = self._recv()
-            if "result" in topic:
-                return 1 if payload["result"] else -1
-        return 0
-
-    def _get_environment_state(self, timeout_ms = 1000):
-        end_time = time.time() + (timeout_ms / 1000)
-        while time.time() < end_time:
-            pass
-
-    def _process_listener_msgs(self, timeout_ms = 1000):
-        end_time = time.time() + (timeout_ms / 1000)
-        while time.time() < end_time: 
-            pass
-            topic, payload = self._recv()
-            if "result" in topic:
-                self.latest_reward = 1 if payload["result"] else -1
-            elif "state" in topic:
-                self.latest_env_state = payload["data"]["screenshot"]
-
-    def _wait_for_response(self, reqId, timeout_ms):
-        end_time = time.time() + (timeout_ms / 1000)
-        while time.time() < end_time:
-            topic, payload = self._recv()
+            print(topic, payload)
+            if "/state" in topic:
+                lastActionSeqNo = payload["data"]["last_action_seqno"]
+                if lastActionSeqNo >= seqNo:
+                    self.latest_env_state = {
+                        'state': [payload['data']['left_viewport']['screenshot'], payload['data']['right_viewport']['screenshot']],
+                        'isSame': payload['data']['same']
+                    }
+                    return
 
 
-
+    def _check_selection(self, selected_same):
+        return self.latest_env_state["isSame"] == selected_same
 
     def reset(self):
-        super().reset()
         data = {
             'event': {
                 'type': 'action',
@@ -127,8 +123,10 @@ class PolyominoEnvironment(gym.Env):
             }
         }
         self._send(data)
+        self.current_timestep = 0
 
     def step(self, action):
+        self.current_timestep += 1
         data = {
             'event': {
                 'type': 'action',
@@ -139,27 +137,34 @@ class PolyominoEnvironment(gym.Env):
         assert(response['data']['status']=='SUCCESS')
 
         # wait for the responses
-        self._process_listener_msgs()
 
         # terminated? what is the terminated state? when has the agent reached its goal
 
-        assert(self.latest_reward is not None and self.latest_env_state is not None)
+
+        print(self.latest_env_state)
 
 
-        reward = self.latest_reward if action in [Actions.SELECT_SAME, Actions.SELECT_DIFFERENT] else 0
 
-        observation = response
+        if action in self.SELECTION_ACTIONS:
+            isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+            reward = 10 if isCorrect else -10
+        else:
+            reward = -1  # or 0 depending on neutrality of non-selection moves
+       
+
+        observation = self.latest_env_state["state"]
         info = response
-        terminated = False
+        terminated = self.MAX_TIMESTEPS <= self.current_timestep;
         truncated = False
-
         return observation, reward, terminated, truncated, info
 
 
 
 
     def close(self):
-        pass
+        self.socket.close()
+        self.listener.close()
+        self.context.term()
 
 
 """
@@ -170,3 +175,17 @@ are the actions hidden to the agent based on the playMode?; currently agent can 
 
 different approach to listener msgs.: use sqn no to sync the data
 """
+
+
+def main():
+    env = PolyominoEnvironment()
+    actions = [8, 0, 9]
+    actions = cycle(actions)
+    while True:
+        action = next(actions)
+        obs, reward, term, trun, info =  env.step(action)
+        print(action, reward)
+        time.sleep(2)
+
+if __name__ == "__main__":
+    main()
