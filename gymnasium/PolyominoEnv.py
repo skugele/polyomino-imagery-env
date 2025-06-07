@@ -110,6 +110,12 @@ class PolyominoEnvironment(gym.Env):
             elif "state" in topic:
                 self.latest_env_state = payload["data"]["screenshot"]
 
+    def _wait_for_response(self, reqId, timeout_ms):
+        end_time = time.time() + (timeout_ms / 1000)
+        while time.time() < end_time:
+            topic, payload = self._recv()
+
+
 
 
     def reset(self):
@@ -159,8 +165,8 @@ class PolyominoEnvironment(gym.Env):
 """
 environment_state: pixel data (screenshot)
 
-are the actions hidden to the agent based on the playMode?
+are the actions hidden to the agent based on the playMode?; currently agent can send the actions but if the env is not in playMode nothing will change
 
 
-different approach to listener msgs.
+different approach to listener msgs.: use sqn no to sync the data
 """
