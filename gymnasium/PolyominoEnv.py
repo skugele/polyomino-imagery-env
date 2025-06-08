@@ -231,6 +231,7 @@ def main():
         print(action, reward)
         if term or trun:
             obs = env.reset()
+            break
 
 if __name__ == "__main__":
     main()
