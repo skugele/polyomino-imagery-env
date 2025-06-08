@@ -56,6 +56,8 @@ onready var bottom_boundary = $viewport_controller/right_viewport_container/righ
 onready var left_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/left
 onready var right_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/right
 
+onready var rightResult = $viewport_controller/right_viewport_container/right_viewport/rightResult
+onready var leftResult = $viewport_controller/left_viewport_container/left_viewport/leftResult
 
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
@@ -110,35 +112,52 @@ func initialize_polyomino_configs():
 
 
 func _input(event):	
+	
+	#hideResultContainer() # hide it initially 
+	
 	if event.is_action_pressed("ui_up"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('up', last_action_seqno)
 	elif event.is_action_pressed("ui_down"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('down', last_action_seqno)
 	elif event.is_action_pressed("ui_left"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('left', last_action_seqno)
 	elif event.is_action_pressed("ui_right"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('right', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_clockwise"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('rotate_clockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_counterclockwise"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('rotate_counterclockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_in"):
 		last_action_seqno += 1
+		hideResultContainer() 
 		add_action('zoom_in', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_out"):
 		last_action_seqno += 1		
+		hideResultContainer() 
 		add_action('zoom_out', last_action_seqno)
 	elif event.is_action_pressed("ui_next_shape"):
 		last_action_seqno += 1		
+		hideResultContainer() 
 		add_action('next_shape', last_action_seqno)
 	elif event.is_action_pressed("ui_toggle_playMode"):
+		hideResultContainer() 
 		toggle_play_mode()
+	elif event.is_action_pressed("ui_select_same"):
+		execute_selection("same")
+	elif event.is_action_pressed("ui_select_different"):
+		execute_selection("different")
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -213,7 +232,8 @@ func add_action(action, seqno):
 func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
-	
+		
+	hideResultContainer() # set it to false to hide it initially
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -369,8 +389,8 @@ func get_screenshot(viewport):
 	
 	var byte_array = screenshot.get_data()
 	var pixel_data = []
-	#for i in byte_array.size():
-	#	pixel_data.append(byte_array[i])
+	for i in byte_array.size():
+		pixel_data.append(byte_array[i])
 	
 	return pixel_data
 
@@ -386,11 +406,36 @@ func get_state_msg_for_viewport(viewport, object):
 		'screenshot' : screenshot
 	}
 
+func showResult(isCorrect):
+	left_viewport.remove_child(ref_object)
+	right_viewport.remove_child(active_object)
+	
+	ref_object = null
+	active_object = null
+	
+	# Red-Dark: Incorrect
+	# Dark-Green: Correct
+	if isCorrect:
+		rightResult.color = Color.green
+		leftResult.color = Color.black
+	else:
+		leftResult.color = Color.red
+		rightResult.color = Color.black
+		
+	
+	rightResult.visible = true
+	leftResult.visible = true
+
+func hideResultContainer():
+	rightResult.visible = false
+	leftResult.visible = false
+	
 func execute_selection(action):
 	if active_object == null:
 		return
-	
-	var is_correct = same if "same" in action else !same
+	var choseSame = "same" in action
+	showResult(choseSame == same)
+	var is_correct = same if choseSame else !same
 
 	gab.send("/polyomino/selection-result/", {
 		"result": is_correct

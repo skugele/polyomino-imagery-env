@@ -12,7 +12,7 @@ import os
 
 import zmq  # Python Bindings for ZeroMq (PyZMQ)
 
-DEFAULT_TIMEOUT = 5000  # in milliseconds
+DEFAULT_TIMEOUT = 25000  # in milliseconds
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 10001
