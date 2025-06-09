@@ -173,14 +173,14 @@ class PolyominoEnvironment(gym.Env):
             else:
                 reward = 10 
         elif action == Actions.NEXT_SHAPE.value:
-                reward = -15
+                reward = -25
         else:
             if action in self.SELECTION_ACTIONS:
                 isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
                 if isCorrect:
                     reward = 10
                 else:
-                    reward = -10
+                    reward = -20
             else:
                 reward = -1 
      
@@ -237,19 +237,19 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 
 def test_model(training_model, training_steps = 100000, buffer_size = 100000):
-    print("Testing with ", training_model.__name__)
+    print("Testing with ", training_model.__name__, "for", training_steps, "steps")
     env = PolyominoEnvironment()
     env = Monitor(env)
-    # check_env(env, warn=True)
-    model = PPO.load("./model-PPO-300000.zip")
-    #
-    # if training_model.__name__ == "DQN":
-    #     model = training_model("MultiInputPolicy", env, verbose=1, buffer_size = buffer_size) # , buffer_size=10000
-    # else:
-    #     model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
-    # model.learn(total_timesteps=training_steps)
-    # model.save(f"model-{training_model.__name__}-{training_steps}")
-    #
+    # model = PPO.load("./model-PPO-300000.zip")
+
+    check_env(env, warn=True)
+    if training_model.__name__ == "DQN":
+        model = training_model("MultiInputPolicy", env, verbose=1, buffer_size = buffer_size) # , buffer_size=10000
+    else:
+        model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
+    model.learn(total_timesteps=training_steps)
+    model.save(f"model-{training_model.__name__}-{training_steps}")
+
     obs, info = env.reset()
     while True:
         action, _ = model.predict(obs)
@@ -262,4 +262,4 @@ def test_model(training_model, training_steps = 100000, buffer_size = 100000):
             obs = env.reset()
             break
 if __name__ == "__main__":
-    test_model(PPO, training_steps=300000)
+    test_model(PPO, training_steps=250000)
