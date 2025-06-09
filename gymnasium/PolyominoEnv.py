@@ -57,6 +57,7 @@ class PolyominoEnvironment(gym.Env):
         self.observation_space = gym.spaces.Dict({
             "left": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
             "right": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
+            "answered": gym.spaces.Discrete(2)
         })
 
         self.context = zmq.Context()
@@ -136,11 +137,13 @@ class PolyominoEnvironment(gym.Env):
         left, right = self.latest_env_state["state"]
         # print(len(left), len(right))
 
+        self.answered_correct = False
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
         observation = {
             "left": left,
-            "right": right
+            "right": right,
+            "answered": 0
         }
         info = {}
         return (observation, info)
@@ -164,16 +167,23 @@ class PolyominoEnvironment(gym.Env):
         # print(self.latest_env_state)
 
 
-
-        if action in self.SELECTION_ACTIONS:
-            isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-            if isCorrect:
-                reward = -5 if self.answered_correct else 10 # shouldn't keep answering if it alreay got it correct
-            else:
+        if self.answered_correct:
+            if action != Actions.NEXT_SHAPE.value:
                 reward = -10
+            else:
+                reward = 10 
+        elif action == Actions.NEXT_SHAPE.value:
+                reward = -15
         else:
-            reward = -1  # or 0 depending on neutrality of non-selection moves
- 
+            if action in self.SELECTION_ACTIONS:
+                isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+                if isCorrect:
+                    reward = 10
+                else:
+                    reward = -10
+            else:
+                reward = -1 
+     
 
         if action == Actions.NEXT_SHAPE.value:
             self.answered_correct = False # reset after choosing the next shape
@@ -184,7 +194,8 @@ class PolyominoEnvironment(gym.Env):
         right = np.array(right, dtype=np.float32)
         observation = {
             "left": left,
-            "right": right
+            "right": right,
+            "answered": 1 if self.answered_correct else 0
         }      
 
         info = response
@@ -225,23 +236,30 @@ from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 
-def test_model(training_model, training_steps = 100000):
+def test_model(training_model, training_steps = 100000, buffer_size = 100000):
     print("Testing with ", training_model.__name__)
     env = PolyominoEnvironment()
     env = Monitor(env)
-    check_env(env, warn=True)
-
-    model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
-    model.learn(total_timesteps=training_steps)
-    model.save(f"model-{training_model.__name__}-{training_steps}")
-
+    # check_env(env, warn=True)
+    model = PPO.load("./model-PPO-300000.zip")
+    #
+    # if training_model.__name__ == "DQN":
+    #     model = training_model("MultiInputPolicy", env, verbose=1, buffer_size = buffer_size) # , buffer_size=10000
+    # else:
+    #     model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
+    # model.learn(total_timesteps=training_steps)
+    # model.save(f"model-{training_model.__name__}-{training_steps}")
+    #
     obs, info = env.reset()
     while True:
         action, _ = model.predict(obs)
+        print(action)
         obs, reward, term, trun, info = env.step(action)
+        print(reward)
         # print(action, reward)
+        input()
         if term or trun:
             obs = env.reset()
             break
 if __name__ == "__main__":
-    test_model(PPO, training_steps=100000)
+    test_model(PPO, training_steps=300000)
