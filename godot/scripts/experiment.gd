@@ -388,10 +388,11 @@ func get_screenshot(viewport):
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
 	
+	var THRESHOLD = 20
 	var byte_array = screenshot.get_data()
 	var pixel_data = []
 	for i in byte_array.size():
-		pixel_data.append(byte_array[i])
+		pixel_data.append(1 if byte_array[i] > THRESHOLD else 0)
 	
 	return pixel_data
 
@@ -408,11 +409,8 @@ func get_state_msg_for_viewport(viewport, object):
 	}
 
 func showResult(isCorrect):
-	left_viewport.remove_child(ref_object)
-	right_viewport.remove_child(active_object)
-	
-	ref_object = null
-	active_object = null
+	ref_object.visible = false
+	active_object.visible = false
 	
 	# Red-Dark: Incorrect
 	# Dark-Green: Correct
@@ -428,6 +426,9 @@ func showResult(isCorrect):
 	leftResult.visible = true
 
 func hideResultContainer():
+	if ref_object and active_object:
+		ref_object.visible = true
+		active_object.visible = true
 	rightResult.visible = false
 	leftResult.visible = false
 	
