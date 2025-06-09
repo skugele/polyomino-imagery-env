@@ -52,6 +52,8 @@ class PolyominoEnvironment(gym.Env):
 
         self.latest_env_state = None
 
+        self.answered_correct = False
+
         self.observation_space = gym.spaces.Dict({
             "left": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
             "right": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
@@ -132,7 +134,7 @@ class PolyominoEnvironment(gym.Env):
         self.current_timestep = 0
 
         left, right = self.latest_env_state["state"]
-        print(len(left), len(right))
+        # print(len(left), len(right))
 
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
@@ -165,10 +167,16 @@ class PolyominoEnvironment(gym.Env):
 
         if action in self.SELECTION_ACTIONS:
             isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-            reward = 10 if isCorrect else -10
+            if isCorrect:
+                reward = -5 if self.answered_correct else 10 # shouldn't keep answering if it alreay got it correct
+            else:
+                reward = -10
         else:
             reward = -1  # or 0 depending on neutrality of non-selection moves
  
+
+        if action == Actions.NEXT_SHAPE.value:
+            self.answered_correct = False # reset after choosing the next shape
 
         left, right = self.latest_env_state["state"]
 
@@ -213,26 +221,27 @@ different approach to listener msgs.: use sqn no to sync the data
 #         print(action, reward)
 #         time.sleep(2)
 #
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 
-def main():
+def test_model(training_model, training_steps = 100000):
+    print("Testing with ", training_model.__name__)
     env = PolyominoEnvironment()
     env = Monitor(env)
     check_env(env, warn=True)
 
-    model = PPO("MultiInputPolicy", env, verbose=1)
-    model.learn(total_timesteps=1000000)
+    model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
+    model.learn(total_timesteps=training_steps)
+    model.save(f"model-{training_model.__name__}-{training_steps}")
 
     obs, info = env.reset()
     while True:
         action, _ = model.predict(obs)
         obs, reward, term, trun, info = env.step(action)
-        print(action, reward)
+        # print(action, reward)
         if term or trun:
             obs = env.reset()
             break
-
 if __name__ == "__main__":
-    main()
+    test_model(PPO, training_steps=100000)
