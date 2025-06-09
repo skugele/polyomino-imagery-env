@@ -58,7 +58,9 @@ class PolyominoEnvironment(gym.Env):
         self.observation_space = gym.spaces.Dict({
             "left": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
             "right": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
-            "last_action_selection": gym.spaces.Discrete(2)
+            "last_action_selection": gym.spaces.Discrete(2),
+            "answered_correct": gym.spaces.Discrete(2)
+
         })
 
         self.context = zmq.Context()
@@ -140,12 +142,14 @@ class PolyominoEnvironment(gym.Env):
 
         self.answered_correct = False
         self.last_action_selection = False
+
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
         observation = {
             "left": left,
             "right": right,
-            "last_action_selection": 0
+            "last_action_selection": 0,
+            "answered_correct": 0
         }
         info = {}
         return (observation, info)
@@ -188,16 +192,20 @@ class PolyominoEnvironment(gym.Env):
 
         # promote trying different configurations to generalize better, todo
         if action in self.SELECTION_ACTIONS:
-            if self.last_action_selection:
+            if self.answered_correct:
+                reward = -20
+            elif self.last_action_selection:
                 reward = -10
             else:
                 isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+                if isCorrect:
+                    self.answered_correct = True
                 reward = 15 if isCorrect else -20
         else:
             reward = -1
 
-        if action == Actions.NEXT_SHAPE.value:
-            reward = -2
+        if action == Actions.NEXT_SHAPE.value and not self.answered_correct:
+            reward = -20
 
 
      
@@ -216,7 +224,8 @@ class PolyominoEnvironment(gym.Env):
         observation = {
             "left": left,
             "right": right,
-            "last_action_selection": 1 if self.last_action_selection else 0
+            "last_action_selection": 1 if self.last_action_selection else 0,
+            "answered_correct": 1 if self.answered_correct else 0
         }      
 
         info = response
@@ -256,11 +265,13 @@ different approach to listener msgs.: use sqn no to sync the data
 from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import CheckpointCallback
 
 def test_model(training_model, training_steps = 100000, buffer_size = 100000):
     print("Testing with ", training_model.__name__, "for", training_steps, "steps")
     env = PolyominoEnvironment()
     env = Monitor(env)
+    checkpoint_callback = CheckpointCallback(save_freq=2000, save_path="./models/")
     # model = PPO.load("./model-PPO-300000.zip")
 
     check_env(env, warn=True)
@@ -268,7 +279,7 @@ def test_model(training_model, training_steps = 100000, buffer_size = 100000):
         model = training_model("MultiInputPolicy", env, verbose=1, buffer_size = buffer_size) # , buffer_size=10000
     else:
         model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
-    model.learn(total_timesteps=training_steps)
+    model.learn(total_timesteps=training_steps, callback = checkpoint_callback)
     model.save(f"model-{training_model.__name__}-{training_steps}")
 
     obs, info = env.reset()
