@@ -223,8 +223,9 @@ def main():
     check_env(env, warn=True)
 
     model = PPO("MultiInputPolicy", env, verbose=1)
-    model.learn(total_timesteps=10000)
+    model.learn(total_timesteps=1000000)
 
+    obs, info = env.reset()
     while True:
         action, _ = model.predict(obs)
         obs, reward, term, trun, info = env.step(action)
