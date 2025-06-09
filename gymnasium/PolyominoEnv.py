@@ -53,11 +53,12 @@ class PolyominoEnvironment(gym.Env):
         self.latest_env_state = None
 
         self.answered_correct = False
+        self.last_action_selection = False
 
         self.observation_space = gym.spaces.Dict({
             "left": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
             "right": gym.spaces.Box(low=0, high=255, shape=(16384,), dtype=np.float32),
-            "answered": gym.spaces.Discrete(2)
+            "last_action_selection": gym.spaces.Discrete(2)
         })
 
         self.context = zmq.Context()
@@ -138,12 +139,13 @@ class PolyominoEnvironment(gym.Env):
         # print(len(left), len(right))
 
         self.answered_correct = False
+        self.last_action_selection = False
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
         observation = {
             "left": left,
             "right": right,
-            "answered": 0
+            "last_action_selection": 0
         }
         info = {}
         return (observation, info)
@@ -167,23 +169,42 @@ class PolyominoEnvironment(gym.Env):
         # print(self.latest_env_state)
 
 
-        if self.answered_correct:
-            if action != Actions.NEXT_SHAPE.value:
+        # if self.answered_correct:
+        #     if action != Actions.NEXT_SHAPE.value:
+        #         reward = -10
+        #     else:
+        #         reward = 10 
+        # elif action == Actions.NEXT_SHAPE.value:
+        #         reward = -25
+        # else:
+        #     if action in self.SELECTION_ACTIONS:
+        #         isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+        #         if isCorrect:
+        #             reward = 10
+        #         else:
+        #             reward = -20
+        #     else:
+        #         reward = -1 
+
+        # promote trying different configurations to generalize better, todo
+        if action in self.SELECTION_ACTIONS:
+            if self.last_action_selection:
                 reward = -10
             else:
-                reward = 10 
-        elif action == Actions.NEXT_SHAPE.value:
-                reward = -25
-        else:
-            if action in self.SELECTION_ACTIONS:
                 isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-                if isCorrect:
-                    reward = 10
-                else:
-                    reward = -20
-            else:
-                reward = -1 
+                reward = 15 if isCorrect else -20
+        else:
+            reward = -1
+
+        if action == Actions.NEXT_SHAPE.value:
+            reward = -2
+
+
      
+        if action in self.SELECTION_ACTIONS:
+            self.last_action_selection = True
+        else:
+            self.last_action_selection = False
 
         if action == Actions.NEXT_SHAPE.value:
             self.answered_correct = False # reset after choosing the next shape
@@ -195,7 +216,7 @@ class PolyominoEnvironment(gym.Env):
         observation = {
             "left": left,
             "right": right,
-            "answered": 1 if self.answered_correct else 0
+            "last_action_selection": 1 if self.last_action_selection else 0
         }      
 
         info = response
