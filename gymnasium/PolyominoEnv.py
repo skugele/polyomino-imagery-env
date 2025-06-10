@@ -267,19 +267,27 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-def test_model(training_model, training_steps = 100000, buffer_size = 50000):
+def train_model(training_model, training_steps = 100000, buffer_size = 30000, load_model = None):
     print("Testing with ", training_model.__name__, "for", training_steps, "steps")
     env = PolyominoEnvironment()
     env = Monitor(env)
-    checkpoint_callback = CheckpointCallback(save_freq=2000, save_path="./models/")
+    checkpoint_callback = CheckpointCallback(
+        save_freq=10000,
+        save_path=f"./models/",
+        name_prefix=f"{training_model.__name__}_{training_steps}"
+    )
     # model = PPO.load("./model-PPO-300000.zip")
-
     check_env(env, warn=True)
-    if training_model.__name__ == "DQN":
-        model = training_model("MultiInputPolicy", env, verbose=1, buffer_size = buffer_size) # , buffer_size=10000
+
+    if load_model:
+        model = training_model.load(load_model, env=env, verbose=1)
     else:
-        model = training_model("MultiInputPolicy", env, verbose=1) # , buffer_size=10000
-    model.learn(total_timesteps=training_steps, callback = checkpoint_callback)
+        if training_model.__name__ == "DQN":
+            model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size)
+        elif training_model.__name__ == "PPO":
+            model = training_model("MultiInputPolicy", env, verbose=1, ent_coef=0.001)
+
+    model.learn(total_timesteps=training_steps, callback=checkpoint_callback)
     model.save(f"model-{training_model.__name__}-{training_steps}")
 
     obs, info = env.reset()
@@ -293,5 +301,24 @@ def test_model(training_model, training_steps = 100000, buffer_size = 50000):
         if term or trun:
             obs = env.reset()
             break
+
+def get_latest_model():
+    model_dir = "./models/"
+    import os
+
+    files = [f for f in os.listdir(model_dir) if f.endswith('.zip')]
+    # sort them and get the latest one
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(model_dir, x)), reverse=True)
+    if files:
+        return os.path.join(model_dir, files[0])
+    else:
+        return None
+
+
 if __name__ == "__main__":
-    test_model(DQN, training_steps=250000)
+    latest_model_path = None
+
+    latest_model_path = get_latest_model()
+    print(latest_model_path)
+
+    train_model(PPO, training_steps=500000, load_model=latest_model_path)
