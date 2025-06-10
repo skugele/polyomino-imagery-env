@@ -193,7 +193,7 @@ class PolyominoEnvironment(gym.Env):
         # promote trying different configurations to generalize better, todo
         if action in self.SELECTION_ACTIONS:
             if self.answered_correct:
-                reward = -20
+                reward = -5
             elif self.last_action_selection:
                 reward = -10
             else:
@@ -204,8 +204,8 @@ class PolyominoEnvironment(gym.Env):
         else:
             reward = -1
 
-        if action == Actions.NEXT_SHAPE.value and not self.answered_correct:
-            reward = -20
+        if action == Actions.NEXT_SHAPE.value and self.answered_correct:
+            reward = 25
 
 
      
@@ -294,4 +294,4 @@ def test_model(training_model, training_steps = 100000, buffer_size = 100000):
             obs = env.reset()
             break
 if __name__ == "__main__":
-    test_model(PPO, training_steps=250000)
+    test_model(DQN, training_steps=250000)
