@@ -12,4 +12,4 @@ WORKDIR /app
 ENV SDL_AUDIODRIVER=dummy
 ENV GODOT_DISABLE_AUDIO=1
 
-CMD xvfb-run ./runEnv
+CMD xvfb-run ./runEnv.x86_64

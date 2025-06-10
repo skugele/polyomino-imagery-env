@@ -138,3 +138,6 @@ dmypy.json
 # Local Only Files
 local/
 .run/
+
+# local models
+*/models/

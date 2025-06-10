@@ -267,7 +267,7 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 
-def test_model(training_model, training_steps = 100000, buffer_size = 100000):
+def test_model(training_model, training_steps = 100000, buffer_size = 50000):
     print("Testing with ", training_model.__name__, "for", training_steps, "steps")
     env = PolyominoEnvironment()
     env = Monitor(env)

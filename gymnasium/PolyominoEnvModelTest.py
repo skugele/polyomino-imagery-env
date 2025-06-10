@@ -7,7 +7,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 def test_model(model_path):
     env = PolyominoEnvironment()
     env = Monitor(env)
-    model = PPO.load("./models/rl_model_224000_steps.zip")
+    model = PPO.load(model_path)
 
     check_env(env, warn=True)
 
@@ -24,5 +24,5 @@ def test_model(model_path):
             break
 
 if __name__ == '__main__':
-    model_path = "./models/rl_model_224000_steps.zip"
+    model_path = "./Trained_Models/rl_model_224000_steps.zip"
     test_model(model_path)
