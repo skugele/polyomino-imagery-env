@@ -204,8 +204,8 @@ class PolyominoEnvironment(gym.Env):
         else:
             reward = -1
 
-        if action == Actions.NEXT_SHAPE.value and self.answered_correct:
-            reward = 25
+        if action == Actions.NEXT_SHAPE.value:
+            reward = 15 if self.answered_correct else -25
 
 
      
