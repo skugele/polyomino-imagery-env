@@ -326,7 +326,7 @@ def get_latest_model():
 if __name__ == "__main__":
     latest_model_path = None
 
-    # latest_model_path = get_latest_model()
-    # print(latest_model_path)
+    latest_model_path = get_latest_model()
+    print(latest_model_path)
 
     train_model(PPO, training_steps=500000, load_model=latest_model_path)
