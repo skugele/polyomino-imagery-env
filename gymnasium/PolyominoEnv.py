@@ -43,8 +43,11 @@ class PolyominoEnvironment(gym.Env):
         self.TIMEOUT = TIMEOUT
         self.MSG_TOPIC_FILTER = MSG_TIMEOUT_FILTER
 
-        self.MAX_TIMESTEPS = MAX_TIMESTEPS;
-        self.current_timestep = 0;
+        self.MAX_TIMESTEPS = MAX_TIMESTEPS
+        self.current_timestep = 0
+
+        self.MAX_PROBLEMS = 50
+        self.current_problem = 0
 
         self.SELECTION_ACTIONS = [Actions.SELECT_SAME.value, Actions.SELECT_DIFFERENT.value]
 
@@ -136,6 +139,9 @@ class PolyominoEnvironment(gym.Env):
         }
         self._send(data)
         self.current_timestep = 0
+        self.current_problem = 0
+
+
 
         left, right = self.latest_env_state["state"]
         # print(len(left), len(right))
@@ -193,19 +199,19 @@ class PolyominoEnvironment(gym.Env):
         # promote trying different configurations to generalize better, todo
         if action in self.SELECTION_ACTIONS:
             if self.answered_correct:
-                reward = -5
+                reward = -25
             elif self.last_action_selection:
                 reward = -10
             else:
                 isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
                 if isCorrect:
                     self.answered_correct = True
-                reward = 15 if isCorrect else -20
+                reward = 35 if isCorrect else -50
         else:
             reward = -1
 
         if action == Actions.NEXT_SHAPE.value:
-            reward = 15 if self.answered_correct else -25
+            reward = 30 if self.answered_correct else -55
 
 
      
@@ -215,6 +221,7 @@ class PolyominoEnvironment(gym.Env):
             self.last_action_selection = False
 
         if action == Actions.NEXT_SHAPE.value:
+            self.current_problem += 1
             self.answered_correct = False # reset after choosing the next shape
 
         left, right = self.latest_env_state["state"]
@@ -229,7 +236,8 @@ class PolyominoEnvironment(gym.Env):
         }      
 
         info = response
-        terminated = self.MAX_TIMESTEPS <= self.current_timestep;
+        # terminated = self.MAX_TIMESTEPS <= self.current_timestep;
+        terminated = self.MAX_PROBLEMS <= self.current_problem
         truncated = False
         return observation, reward, terminated, truncated, info
 
@@ -283,9 +291,9 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
         model = training_model.load(load_model, env=env, verbose=1)
     else:
         if training_model.__name__ == "DQN":
-            model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size)
+            model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size, tensorboard_log="./tensorboard_logs/")
         elif training_model.__name__ == "PPO":
-            model = training_model("MultiInputPolicy", env, verbose=1, ent_coef=0.001)
+            model = training_model("MultiInputPolicy", env, verbose=1, ent_coef=0.001, tensorboard_log="./tensorboard_logs/")
 
     model.learn(total_timesteps=training_steps, callback=checkpoint_callback)
     model.save(f"model-{training_model.__name__}-{training_steps}")
@@ -318,7 +326,7 @@ def get_latest_model():
 if __name__ == "__main__":
     latest_model_path = None
 
-    latest_model_path = get_latest_model()
-    print(latest_model_path)
+    # latest_model_path = get_latest_model()
+    # print(latest_model_path)
 
     train_model(PPO, training_steps=500000, load_model=latest_model_path)
