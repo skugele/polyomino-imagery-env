@@ -185,6 +185,8 @@ func _process(_delta):
 		active_object.global_position += corrective_dir
 		
 	else:
+		if pending_actions.size() <= 0:
+			return
 		var pending_action = pending_actions.pop_back()
 		if pending_action:
 			# activity - stop time-based publication
