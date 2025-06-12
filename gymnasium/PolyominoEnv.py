@@ -198,6 +198,44 @@ class PolyominoEnvironment(gym.Env):
 
     def _check_selection(self, selected_same):
         return self.latest_env_state["isSame"] == selected_same
+    
+    def calculate_reward(self, action):
+        if self.answered_correct:
+            if action != Actions.NEXT_SHAPE.value:
+                reward = -10
+            else:
+                reward = 10 
+        elif action == Actions.NEXT_SHAPE.value:
+                reward = -25
+        else:
+            if action in self.SELECTION_ACTIONS:
+                isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+                if isCorrect:
+                    reward = 10
+                else:
+                    reward = -20
+            else:
+                reward = -1 
+
+        # promote trying different configurations to generalize better, todo
+        
+        # if action in self.SELECTION_ACTIONS:
+        #     if self.answered_correct:
+        #         reward = -25
+        #     elif self.last_action_selection:
+        #         reward = -10
+        #     else:
+        #         isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+        #         if isCorrect:
+        #             self.answered_correct = True
+        #         reward = 35 if isCorrect else -50
+        # else:
+        #     reward = -1
+
+        # if action == Actions.NEXT_SHAPE.value:
+        #     reward = 30 if self.answered_correct else -55
+
+        return reward
 
     def reset(self, seed=42):
         data = {
@@ -220,12 +258,7 @@ class PolyominoEnvironment(gym.Env):
 
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
-        # observation = {
-        #     "left": left,
-        #     "right": right,
-        #     "last_action_selection": 0,
-        #     "answered_correct": 0
-        # }
+        
         observation = {
             "left": left,
             "right": right,
@@ -247,47 +280,7 @@ class PolyominoEnvironment(gym.Env):
         response = self._send(data)
         assert(response['data']['status']=='SUCCESS')
 
-        # wait for the responses
-
-        # terminated? what is the terminated state? when has the agent reached its goal
-
-
-        # print(self.latest_env_state)
-
-
-        # if self.answered_correct:
-        #     if action != Actions.NEXT_SHAPE.value:
-        #         reward = -10
-        #     else:
-        #         reward = 10 
-        # elif action == Actions.NEXT_SHAPE.value:
-        #         reward = -25
-        # else:
-        #     if action in self.SELECTION_ACTIONS:
-        #         isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-        #         if isCorrect:
-        #             reward = 10
-        #         else:
-        #             reward = -20
-        #     else:
-        #         reward = -1 
-
-        # promote trying different configurations to generalize better, todo
-        if action in self.SELECTION_ACTIONS:
-            if self.answered_correct:
-                reward = -25
-            elif self.last_action_selection:
-                reward = -10
-            else:
-                isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-                if isCorrect:
-                    self.answered_correct = True
-                reward = 35 if isCorrect else -50
-        else:
-            reward = -1
-
-        if action == Actions.NEXT_SHAPE.value:
-            reward = 30 if self.answered_correct else -55
+        reward = self.calculate_reward(action)
 
 
      
@@ -304,12 +297,7 @@ class PolyominoEnvironment(gym.Env):
 
         left = np.array(left, dtype=np.float32)
         right = np.array(right, dtype=np.float32)
-        # observation = {
-        #     "left": left,
-        #     "right": right,
-        #     "last_action_selection": 1 if self.last_action_selection else 0,
-        #     "answered_correct": 1 if self.answered_correct else 0
-        # }      
+
         observation = {
             "left": left,
             "right": right,
@@ -380,7 +368,7 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
         if training_model.__name__ == "DQN":
             model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size, tensorboard_log="./tensorboard_logs/", policy_kwargs=policy_kwargs)
         elif training_model.__name__ == "PPO":
-            model = training_model("MultiInputPolicy", env, verbose=1, ent_coef=0.001, tensorboard_log="./tensorboard_logs/")
+            model = training_model("MultiInputPolicy", env, verbose=1, ent_coef=0.001, tensorboard_log="./tensorboard_logs/", policy_kwargs=policy_kwargs)
 
     model.learn(total_timesteps=training_steps, callback=checkpoint_callback)
     model.save(f"model-{training_model.__name__}-{training_steps}")
@@ -416,4 +404,4 @@ if __name__ == "__main__":
     # latest_model_path = get_latest_model()
     # print(latest_model_path)
 
-    train_model(DQN, training_steps=500000, load_model=latest_model_path)
+    train_model(PPO, training_steps=500000, load_model=latest_model_path)
