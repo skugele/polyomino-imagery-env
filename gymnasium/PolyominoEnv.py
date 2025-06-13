@@ -200,40 +200,40 @@ class PolyominoEnvironment(gym.Env):
         return self.latest_env_state["isSame"] == selected_same
     
     def calculate_reward(self, action):
-        if self.answered_correct:
-            if action != Actions.NEXT_SHAPE.value:
-                reward = -10
-            else:
-                reward = 10 
-        elif action == Actions.NEXT_SHAPE.value:
-                reward = -25
-        else:
-            if action in self.SELECTION_ACTIONS:
-                isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-                if isCorrect:
-                    reward = 10
-                else:
-                    reward = -20
-            else:
-                reward = -1 
-
-        # promote trying different configurations to generalize better, todo
-        
-        # if action in self.SELECTION_ACTIONS:
-        #     if self.answered_correct:
-        #         reward = -25
-        #     elif self.last_action_selection:
+        # if self.answered_correct:
+        #     if action != Actions.NEXT_SHAPE.value:
         #         reward = -10
         #     else:
+        #         reward = 10 
+        # elif action == Actions.NEXT_SHAPE.value:
+        #         reward = -25
+        # else:
+        #     if action in self.SELECTION_ACTIONS:
         #         isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
         #         if isCorrect:
-        #             self.answered_correct = True
-        #         reward = 35 if isCorrect else -50
-        # else:
-        #     reward = -1
+        #             reward = 10
+        #         else:
+        #             reward = -20
+        #     else:
+        #         reward = -1 
+        #
+        # promote trying different configurations to generalize better, todo
+        
+        if action in self.SELECTION_ACTIONS:
+            if self.answered_correct:
+                reward = -25
+            elif self.last_action_selection:
+                reward = -10
+            else:
+                isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
+                if isCorrect:
+                    self.answered_correct = True
+                reward = 35 if isCorrect else -50
+        else:
+            reward = -1
 
-        # if action == Actions.NEXT_SHAPE.value:
-        #     reward = 30 if self.answered_correct else -55
+        if action == Actions.NEXT_SHAPE.value:
+            reward = 30 if self.answered_correct else -55
 
         return reward
 
