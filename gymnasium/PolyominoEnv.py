@@ -349,7 +349,7 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
     print("Testing with ", training_model.__name__, "for", training_steps, "steps")
 
     policy_kwargs = dict(
-        features_extractor_class=CustomCNNExtractor,  # This IS your CNN
+        features_extractor_class=CustomCNNExtractor,  
         features_extractor_kwargs=dict(features_dim=256),
     )
     env = PolyominoEnvironment()
