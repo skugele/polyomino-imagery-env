@@ -40,6 +40,7 @@ onready var unpublished_change = true
 # check if the shapes are same
 onready var same = false
 onready var playMode = true
+onready var answered = false
 
 
 ########################
@@ -117,47 +118,37 @@ func _input(event):
 	
 	if event.is_action_pressed("ui_up"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('up', last_action_seqno)
 	elif event.is_action_pressed("ui_down"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('down', last_action_seqno)
 	elif event.is_action_pressed("ui_left"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('left', last_action_seqno)
 	elif event.is_action_pressed("ui_right"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('right', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_clockwise"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('rotate_clockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_rotate_counterclockwise"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('rotate_counterclockwise', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_in"):
 		last_action_seqno += 1
-		hideResultContainer() 
 		add_action('zoom_in', last_action_seqno)
 	elif event.is_action_pressed("ui_zoom_out"):
 		last_action_seqno += 1		
-		hideResultContainer() 
 		add_action('zoom_out', last_action_seqno)
 	elif event.is_action_pressed("ui_next_shape"):
 		last_action_seqno += 1		
-		hideResultContainer() 
 		add_action('next_shape', last_action_seqno)
 	elif event.is_action_pressed("ui_toggle_playMode"):
-		hideResultContainer() 
 		toggle_play_mode()
 	elif event.is_action_pressed("ui_select_same"):
-		execute_selection("same")
+		add_action("select_same_shape", last_action_seqno)
 	elif event.is_action_pressed("ui_select_different"):
-		execute_selection("different")
+		add_action("select_different_shape", last_action_seqno)
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -235,7 +226,9 @@ func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
 		
-	
+	if answered and action != "next_shape":
+		return
+		
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -334,6 +327,8 @@ func execute_next_shape():
 	update_active_image(new_active_image)
 	
 	randomize_object(active_object)
+	
+	answered = false
 	
 
 func execute_translation(action):
@@ -437,6 +432,7 @@ func hideResultContainer():
 func execute_selection(action):
 	if active_object == null:
 		return
+	answered = true
 	var choseSame = "same" in action
 	showResult(choseSame == same)
 	var is_correct = same if choseSame else !same
