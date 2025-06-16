@@ -144,10 +144,13 @@ func _input(event):
 		last_action_seqno += 1		
 		add_action('next_shape', last_action_seqno)
 	elif event.is_action_pressed("ui_toggle_playMode"):
+		last_action_seqno += 1
 		toggle_play_mode()
 	elif event.is_action_pressed("ui_select_same"):
+		last_action_seqno += 1
 		add_action("select_same_shape", last_action_seqno)
 	elif event.is_action_pressed("ui_select_different"):
+		last_action_seqno += 1
 		add_action("select_different_shape", last_action_seqno)
 
 
