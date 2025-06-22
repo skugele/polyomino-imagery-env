@@ -6,6 +6,9 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from BVAE import BVAE
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='polyomino_env.log', filemode='a')
+logging.info("============== Polyomino Environment initialized ================")
 
 class Actions(Enum):
     UP = 0
@@ -105,17 +108,25 @@ class PolyominoEnvironment(gym.Env):
         encoded_req = json.dumps(request)
         self.socket.send_string(encoded_req)
         self._wait_for_update(self.seqno)
-        return self.socket.recv_json()
+
+        while True:
+            try:
+                return self.socket.recv_json(flags=zmq.NOBLOCK)
+            except zmq.Again:
+                continue
     
+
     def _recv(self):
-        msg = self.listener.recv_string()
+        while True:
+            try:
+                msg = self.listener.recv_string(flags=zmq.NOBLOCK)
+                break
+            except zmq.Again:
+                continue
 
         ndx = msg.find('{')
         topic, encoded_payload = msg[0:ndx - 1], msg[ndx:]
-
-        # unmarshal JSON message content
         payload = json.loads(encoded_payload)
-
         return topic, payload
     
     def _encode_state(self, left, right):
@@ -153,13 +164,16 @@ class PolyominoEnvironment(gym.Env):
         #simplified for test
         if action in self.SELECTION_ACTIONS:
             if self.answered:
-                reward = -1
+                reward = -0.05
             else:
                 isCorrect = self._check_selection(action == Actions.SELECT_SAME.value)
-                reward = 10 if isCorrect else -20
+                reward = 1 if isCorrect else -1
             self.answered = True
         else:
-            reward = -1
+            if action == Actions.NEXT_SHAPE.value and not self.answered:
+                reward = -1
+            else:
+                reward = -0.05
 
         return reward
 
@@ -216,6 +230,7 @@ class PolyominoEnvironment(gym.Env):
         # terminated = self.MAX_TIMESTEPS <= self.current_timestep;
         terminated = self.MAX_PROBLEMS <= self.current_problem
         truncated = False
+        logging.info(f"Observation: {observation}, Action: {action}, Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}, Info: {info}")
         return observation, reward, terminated, truncated, info
 
     def close(self):

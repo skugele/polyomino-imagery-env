@@ -23,14 +23,17 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
     check_env(env, warn=True)
 
     model = None
+    model_name = training_model.__name__
 
     if load_model:
-        print("Loading Saved Model ...")
-        model = training_model.load(load_model, env=env, verbose=1)
+        print("Loading Saved Model ...", load_model)
+        model = training_model.load(load_model, env=env, verbose=1, exploration_initial_eps=0.2)
     else:
         print("Setting up new model ...")
         if training_model.__name__ == "DQN":
-            model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size, tensorboard_log="./tensorboard_logs/", exploration_fraction=0.5)
+            model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size, tensorboard_log="./tensorboard_logs/", exploration_fraction=1)
+        elif training_model.__name__ == "PPO":
+            model = training_model("MultiInputPolicy", env, verbose=1, tensorboard_log="./tensorboard_logs/")
 
 
     model.learn(total_timesteps=training_steps, callback=checkpoint_callback)
@@ -39,10 +42,8 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
     obs, info = env.reset()
     while True:
         action, _ = model.predict(obs)
-        print(action)
         obs, reward, term, trun, info = env.step(action)
-        print(reward)
-        # print(action, reward)
+        print(action, reward)
         input()
         if term or trun:
             obs = env.reset()
@@ -66,4 +67,5 @@ if __name__ == "__main__":
 
     # latest_model_path = get_latest_model()
     # print(latest_model_path)
-    train_model(DQN, training_steps=1000000, load_model=latest_model_path)
+
+    train_model(PPO, training_steps=500000, load_model=latest_model_path)

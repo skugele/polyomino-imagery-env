@@ -19,12 +19,12 @@ class Actions(Enum):
     SELECT_DIFFERENT = 10
 
 def eval(model_path, no_of_episodes=25):
-    CORRECT_ANSWER_REWARD = 35
-    WRONG_ANSWER_PENALTY = -50
+    CORRECT_ANSWER_REWARD = 1
+    WRONG_ANSWER_PENALTY = -1
 
     env = PolyominoEnvironment()
     env = Monitor(env)
-    model = PPO.load(model_path)
+    model = PPO.load(model_path, exploration_initial_eps=0)
 
     check_env(env, warn=True)
 
@@ -52,5 +52,5 @@ def eval(model_path, no_of_episodes=25):
     return total_reward, correct, wrong 
 
 if __name__ == '__main__':
-    model_path = "./Trained_Models/PPO_500000_20000_steps.zip"
+    model_path = "./Trained_Models/PPO_500000_300000_steps.zip"
     eval(model_path, no_of_episodes=50)
