@@ -388,11 +388,11 @@ func get_screenshot(viewport):
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
 	
-	var THRESHOLD = 20
+	var THRESHOLD = 170
 	var byte_array = screenshot.get_data()
 	var pixel_data = []
 	for i in byte_array.size():
-		pixel_data.append(1 if byte_array[i] > THRESHOLD else 0)
+		pixel_data.append(255 if byte_array[i] < THRESHOLD else 0)
 	
 	return pixel_data
 
