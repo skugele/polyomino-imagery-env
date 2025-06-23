@@ -284,6 +284,7 @@ func update_ref_image(new_object):
 	# remove last polyomino from scene
 	if ref_object != null:
 		left_viewport.remove_child(ref_object)
+		ref_object.queue_free()
 		ref_object = null
 	
 	left_viewport.add_child(new_object)
@@ -294,6 +295,7 @@ func update_active_image(new_object):
 	# remove last polyomino from scene
 	if active_object != null:
 		right_viewport.remove_child(active_object)
+		active_object.queue_free()
 		active_object = null
 			
 	right_viewport.add_child(new_object)
@@ -388,12 +390,8 @@ func get_screenshot(viewport):
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
 	
-	var THRESHOLD = 170
 	var byte_array = screenshot.get_data()
-	var pixel_data = []
-	for i in byte_array.size():
-		pixel_data.append(255 if byte_array[i] < THRESHOLD else 0)
-	
+	var pixel_data = Array(byte_array)
 	return pixel_data
 
 func get_state_msg_for_viewport(viewport, object):
