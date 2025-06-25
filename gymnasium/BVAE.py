@@ -33,26 +33,31 @@ class Encoder(tf.keras.layers.Layer):
     # layers
     self.preprocess = Preprocessor()
     # 128 x 128 x 1
-    self.conv1 = Conv2D(filters=16, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv1')
+    self.conv1 = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv1')
     self.bnorm1 = BatchNormalization(name="encoder_bnorm1")
     self.mpool1 = MaxPool2D(name='encoder_mpool1')
 
-    # 64 x 64 x 16
-    self.conv2 = Conv2D(filters=32, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv2')
+    # 64 x 64 x 32
+    self.conv2 = Conv2D(filters=64, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv2')
     self.bnorm2 = BatchNormalization(name="encoder_bnorm2")
     self.mpool2 = MaxPool2D(name='encoder_mpool2')
 
-    # 32 x 32 x 32
-    self.conv3 = Conv2D(filters=64, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv3')
+    # 32 x 32 x 64
+    self.conv3 = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv3')
     self.bnorm3 = BatchNormalization(name="encoder_bnorm3")
     self.mpool3 = MaxPool2D(name='encoder_mpool3')
 
-    # 16 x 16 x 64
-    self.conv4 = Conv2D(filters=128, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv4')
+    # 16 x 16 x 128
+    self.conv4 = Conv2D(filters=256, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv4')
     self.bnorm4 = BatchNormalization(name="encoder_bnorm4")
     self.mpool4 = MaxPool2D(name='encoder_mpool4')
 
-    # 8 x 8 x 128
+    # 8 x 8 x 256
+    self.conv5 = Conv2D(filters=512, kernel_size=3, strides=1, padding='same', activation='relu', name='encoder_conv5')
+    self.bnorm5 = BatchNormalization(name="encoder_bnorm5")
+    self.mpool5 = MaxPool2D(name='encoder_mpool5')
+
+    # 4 x 4 x 512
     self.flatten = Flatten(name='encoder_flatten')
 
     self.dense1 = Dense(2 * self.latent_dims, name='encoder_dense1')
@@ -62,6 +67,8 @@ class Encoder(tf.keras.layers.Layer):
     self.logvar = Dense(self.latent_dims, name='encoder_logvar')
     self.mu = Dense(self.latent_dims, name='encoder_mu')
     self.sigma = Lambda(lambda x: tf.exp(0.5*x), name='encoder_sigma')
+    self.logvar_clip = Lambda(lambda x: tf.clip_by_value(x, -20.0, 5.0), name='logvar_clip')
+
 
   def encode(self, inputs, preprocess=True):
     # print the shape of the input
@@ -71,11 +78,15 @@ class Encoder(tf.keras.layers.Layer):
     x=self.conv2(x); x=self.bnorm2(x);  x=self.mpool2(x)
     x=self.conv3(x); x=self.bnorm3(x);  x=self.mpool3(x)
     x=self.conv4(x); x=self.bnorm4(x);  x=self.mpool4(x)
+    x=self.conv5(x); x=self.bnorm5(x);  x=self.mpool5(x)
     x=self.flatten(x)
     x=self.dense1(x)
     # print(f"Shape of output from encoder: {x.shape}")
 
-    return self.mu(x), self.logvar(x), self.sigma(self.logvar(x)), p
+    logvar = self.logvar(x)
+    logvar = self.logvar_clip(logvar)
+
+    return self.mu(x), logvar, self.sigma(logvar), p
 
 
   def call(self, inputs):
@@ -93,33 +104,43 @@ class Decoder(tf.keras.Model):
         self.latent_dims = latent_dims
 
         # layers
-        self.dense1 = Dense(8 * 8 * 128, activation='relu', name='decoder_dense1')
-        self.reshape1 = Reshape((8, 8, 128), name='decoder_reshape1')
+        self.dense1 = Dense(4 * 4 * 512, activation='relu', name='decoder_dense1')
+        self.reshape1 = Reshape((4, 4, 512), name='decoder_reshape1')
 
-        # 8 x 8 x 128 -> 16 x 16 x 64
-        self.convT1 = Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT1')
+        # 4 x 4 x 512 -> 8 x 8 x 256
+        self.convT1 = Conv2DTranspose(filters=256, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT1')
         self.bnorm1 = BatchNormalization(name="decoder_bnorm1")
 
-        # 16 x 16 x 64 -> 32 x 32 x 32
-        self.convT2 = Conv2DTranspose(filters=32, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT2')
+        # 8 x 8 x 256 -> 16 x 16 x 128
+        self.convT2 = Conv2DTranspose(filters=128, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT2')
         self.bnorm2 = BatchNormalization(name="decoder_bnorm2")
 
-        # 32 x 32 x 32 -> 64 x 64 x 16
-        self.convT3 = Conv2DTranspose(filters=16, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT3')
+        # 16 x 16 x 128 -> 32 x 32 x 64
+        self.convT3 = Conv2DTranspose(filters=64, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT3')
         self.bnorm3 = BatchNormalization(name="decoder_bnorm3")
 
-        # 64 x 64 x 16 -> 128 x 128 x 1
-        self.convT4 = Conv2DTranspose(filters=1, kernel_size=3, strides=2, padding='same', activation='sigmoid', name='decoder_convT4')
-       
+        # 32 x 32 x 64 -> 64 x 64 x 32
+        self.convT4 = Conv2DTranspose(filters=32, kernel_size=3, strides=2, padding='same', activation='relu', name='decoder_convT4')
+        self.bnorm4 = BatchNormalization(name="decoder_bnorm4")
+
+        # 64 x 64 x 32 -> 128 x 128 x 1
+        self.convT5 = Conv2DTranspose(filters=1, kernel_size=3, strides=2, padding='same', activation='sigmoid', name='decoder_convT5')
+
+
+        # binary output
+        # self.binaryOutput = Lambda(lambda x: tf.cast(x > 0.5, tf.float32), name="decoder_binary_lambda")
 
     def decode(self, z):
         x = self.dense1(z)
         x = self.reshape1(x)
 
-        x = self.convT1(x); x = self.bnorm1(x)
-        x = self.convT2(x); x = self.bnorm2(x)
-        x = self.convT3(x); x = self.bnorm3(x)
-        x = self.convT4(x);
+        x = self.convT1(x)
+        x = self.convT2(x)
+        x = self.convT3(x)
+        x = self.convT4(x)
+        x = self.convT5(x)
+        # x = self.binaryOutput(x)
+
 
         return x
 

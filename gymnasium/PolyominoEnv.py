@@ -24,7 +24,7 @@ class Actions(Enum):
     SELECT_DIFFERENT = 10
 
 class PolyominoEnvironment(gym.Env):
-    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000, BVAE_MODEL_PATH = "/home/nao/Documents/Projects/polyomino/polyomino-imagery-env/gymnasium/bvae_model_ldims_64.keras"):
+    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000, BVAE_MODEL_PATH = "BVAE_Models/bvae_32dims_90acc.keras"):
         self.ACTION_MAP = {
               'W': 'up',
               'S': 'down',
