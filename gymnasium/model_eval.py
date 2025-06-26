@@ -52,5 +52,5 @@ def eval(model_path, no_of_episodes=25):
     return total_reward, correct, wrong 
 
 if __name__ == '__main__':
-    model_path = "./Trained_Models/PPO_500000_500000_steps.zip"
+    model_path = "./Trained_Models/PPO_1000000_1000000_steps.zip"
     eval(model_path, no_of_episodes=50)

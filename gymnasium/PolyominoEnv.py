@@ -10,6 +10,8 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='polyomino_env.log', filemode='a')
 logging.info("============== Polyomino Environment initialized ================")
 
+BVAE_MODEL_PATH = "BVAE_Models/bvae_32dims_90acc.keras"
+
 class Actions(Enum):
     UP = 0
     DOWN = 1
@@ -24,7 +26,7 @@ class Actions(Enum):
     SELECT_DIFFERENT = 10
 
 class PolyominoEnvironment(gym.Env):
-    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000, BVAE_MODEL_PATH = "BVAE_Models/bvae_32dims_90acc.keras"):
+    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000, BVAE_MODEL_PATH = BVAE_MODEL_PATH):
         self.ACTION_MAP = {
               'W': 'up',
               'S': 'down',
@@ -152,10 +154,10 @@ class PolyominoEnvironment(gym.Env):
             mu, _, _, _ = self.bvae_model.encode(inputs)
             mu_left, mu_right = mu[0], mu[1]
 
-            # self.index += 1
-            # decoded_x = self.bvae_model.decode(mu)
+            self.index += 1
+            decoded_x = self.bvae_model.decode(mu)
 
-            # plot the decoded image
+            #plot the decoded image
             # print("SHowing decoded image for left viewport:")
             # import matplotlib.pyplot as plt
             # left_img = left[:, :, 0]
@@ -181,7 +183,7 @@ class PolyominoEnvironment(gym.Env):
             # axs[1, 1].set_title(f'Reconstructed Right\nAvg pixel: {np.mean(decoded_right_img):.2f}')
             # axs[1, 1].axis('off')
 
-            # plt.savefig(f'decoded_viewports_{self.index}.png')
+            # plt.savefig(f'reconstructed_images/decoded_viewports_{self.index}.png')
             # plt.close(fig)
 
             return mu_left, mu_right

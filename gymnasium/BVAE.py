@@ -10,7 +10,7 @@ INPUT_WIDTH = 128
 
 INPUT_SHAPE = (INPUT_HEIGHT, INPUT_WIDTH, 1)
 
-latent_dims = 16
+latent_dims = 64
 
 class Preprocessor(tf.keras.Model):
   def __init__(self):

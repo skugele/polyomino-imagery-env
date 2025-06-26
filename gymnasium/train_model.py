@@ -21,6 +21,17 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
     )
     # model = PPO.load("./model-PPO-300000.zip")
     check_env(env, warn=True)
+    # make random moves
+    # for _ in range(30):
+    #     obs, info = env.reset()
+    #     action = env.action_space.sample()
+    #     obs, reward, term, trun, info = env.step(action)
+    #     print("Random Action:", action, "Reward:", reward)
+    #     if term or trun:
+    #         obs = env.reset()
+    #         print("Resetting Environment")
+    # return
+
 
     model = None
     model_name = training_model.__name__
@@ -68,4 +79,4 @@ if __name__ == "__main__":
     # latest_model_path = get_latest_model()
     # print(latest_model_path)
 
-    train_model(PPO, training_steps=500000, load_model=latest_model_path)
+    train_model(PPO, training_steps=1000000, load_model=latest_model_path)
