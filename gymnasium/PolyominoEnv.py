@@ -7,6 +7,8 @@ import tensorflow as tf
 import pandas as pd
 from BVAE import BVAE
 import logging
+from sklearn.metrics.pairwise import cosine_similarity
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='polyomino_env.log', filemode='a')
 logging.info("============== Polyomino Environment initialized ================")
 
@@ -250,13 +252,16 @@ class PolyominoEnvironment(gym.Env):
 
         left, right = self.latest_env_state["state"]
         mu_left, mu_right = self._encode_state(left, right)
+        cosine_sim = cosine_similarity(mu_left.numpy().reshape(1, -1), mu_right.numpy().reshape(1, -1))[0][0]
 
         observation = {
             "left": mu_left.numpy(),
             "right": mu_right.numpy(),
         }
 
-        info = {}
+        info = {
+            "cosine_similarity": cosine_sim,
+        }
         # terminated = self.MAX_TIMESTEPS <= self.current_timestep;
         terminated = self.MAX_PROBLEMS <= self.current_problem
         truncated = False

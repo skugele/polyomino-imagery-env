@@ -6,6 +6,8 @@ from stable_baselines3 import PPO, DQN
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
+from sb3_contrib import RecurrentPPO
+from stable_baselines3.common.evaluation import evaluate_policy
 
 latent_dimensions = 16
 
@@ -38,17 +40,20 @@ def train_model(training_model, training_steps = 100000, buffer_size = 30000, lo
 
     if load_model:
         print("Loading Saved Model ...", load_model)
-        model = training_model.load(load_model, env=env, verbose=1, exploration_initial_eps=0.2)
+        model = training_model.load(load_model, env=env, verbose=1, exploration_initial_eps=0.5, exploration_fraction=1)
     else:
         print("Setting up new model ...")
         if training_model.__name__ == "DQN":
             model = training_model("MultiInputPolicy", env, verbose=1, buffer_size=buffer_size, tensorboard_log="./tensorboard_logs/", exploration_fraction=1)
         elif training_model.__name__ == "PPO":
             model = training_model("MultiInputPolicy", env, verbose=1, tensorboard_log="./tensorboard_logs/")
+        elif training_model.__name__ == "RecurrentPPO":
+            model = training_model("MultiInputLstmPolicy", env, verbose=1, tensorboard_log="./tensorboard_logs/")
 
 
     model.learn(total_timesteps=training_steps, callback=checkpoint_callback)
     model.save(f"model-{training_model.__name__}-{training_steps}")
+
 
     obs, info = env.reset()
     while True:
@@ -76,7 +81,7 @@ def get_latest_model():
 if __name__ == "__main__":
     latest_model_path = None
 
-    # latest_model_path = get_latest_model()
-    # print(latest_model_path)
+    latest_model_path = get_latest_model()
+    print(latest_model_path)
 
-    train_model(PPO, training_steps=1000000, load_model=latest_model_path)
+    train_model(DQN, training_steps=20000000, load_model=latest_model_path)
