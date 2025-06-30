@@ -24,9 +24,8 @@ def eval(model_path, no_of_episodes=25):
 
     env = PolyominoEnvironment()
     env = Monitor(env)
-    model = PPO.load(model_path, exploration_initial_eps=0)
+    model = DQN.load(model_path, exploration_initial_eps=0)
 
-    check_env(env, warn=True)
 
     obs, _ = env.reset()
     total_reward = 0
@@ -52,5 +51,5 @@ def eval(model_path, no_of_episodes=25):
     return total_reward, correct, wrong 
 
 if __name__ == '__main__':
-    model_path = "./Trained_Models/PPO_1000000_1000000_steps.zip"
+    model_path = "./Trained_Models/DQN_500000_60000_steps.zip"
     eval(model_path, no_of_episodes=50)

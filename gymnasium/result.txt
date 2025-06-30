@@ -1,0 +1,19 @@
+
+==================================================
+POLYOMINO PERFORMANCE REPORT
+==================================================
+Total Attempts: 56
+Overall Accuracy: 71.43%
+Correct Answers: 40
+
+------------------------------
+BREAKDOWN BY SHAPE COMPARISON:
+------------------------------
+Same Shape Attempts: 30
+Same Shape Correct: 24
+Same Shape Accuracy: 80.00%
+
+Different Shape Attempts: 26
+Different Shape Correct: 4
+Different Shape Accuracy: 15.38%
+

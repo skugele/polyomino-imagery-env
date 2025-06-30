@@ -235,27 +235,6 @@ class PolyominoMetrics:
         ax3.set_ylabel('Number of Attempts')
         ax3.set_title('Distribution of Attempts')
         
-        # Performance over time (if timestamps available)
-        if len(self.performance_data['results']) > 1:
-            cumulative_accuracy = []
-            cumulative_correct = 0
-            for i, result in enumerate(self.performance_data['results']):
-                if result:
-                    cumulative_correct += 1
-                cumulative_accuracy.append((cumulative_correct / (i + 1)) * 100)
-            
-            ax4.plot(range(1, len(cumulative_accuracy) + 1), cumulative_accuracy, 
-                    marker='o', linewidth=2, markersize=4)
-            ax4.set_xlabel('Attempt Number')
-            ax4.set_ylabel('Cumulative Accuracy (%)')
-            ax4.set_title('Performance Trend Over Time')
-            ax4.grid(True, alpha=0.3)
-            ax4.set_ylim(0, 100)
-        else:
-            ax4.text(0.5, 0.5, 'Insufficient data\nfor trend analysis', 
-                    ha='center', va='center', transform=ax4.transAxes, fontsize=12)
-            ax4.set_title('Performance Trend Over Time')
-        
         plt.tight_layout()
         
         if save_path:
