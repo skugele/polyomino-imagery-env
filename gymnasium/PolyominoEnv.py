@@ -136,6 +136,7 @@ class PolyominoEnvironment(gym.Env):
         while time.time() < end_time:
             try:
                 topic, payload = self._recv()
+                # print(f"Received topic: {topic}, payload: {payload}")
             except zmq.Again:
                 continue
             if "/state" in topic:
