@@ -156,7 +156,6 @@ func _input(event):
 
 # removes and executes the oldest pending action from the queue (if one exists)
 func _process(_delta):	
-	#print("[DEBUG] _process")
 	if unpublished_change:
 		publish_state()
 			
@@ -182,7 +181,6 @@ func _process(_delta):
 	else:
 		if pending_actions.size() <= 0:
 			return
-		print("[DEBUG] pending_actions.pop_back()")
 		var pending_action = pending_actions.pop_back()
 		if pending_action:
 			# activity - stop time-based publication
@@ -234,6 +232,10 @@ func execute(action):
 	if answered and action != "next_shape":
 		return
 		
+	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
+		return
+
+		
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -284,7 +286,6 @@ func generate_image(config):
 	
 func update_ref_image(new_object):
 	# remove last polyomino from scene
-	print("[DEBUG] update_ref_image")
 	if ref_object != null:
 		left_viewport.remove_child(ref_object)
 		ref_object.queue_free()
@@ -295,7 +296,6 @@ func update_ref_image(new_object):
 	
 	
 func update_active_image(new_object):
-	print("[DEBUG] update_active_image")
 	# remove last polyomino from scene
 	if active_object != null:
 		right_viewport.remove_child(active_object)
@@ -307,7 +307,6 @@ func update_active_image(new_object):
 
 	
 func get_random_config(with_replacement=true):
-	print("[DEBUG] get_Random_config")
 	var index = rng.randi_range(0, polyomino_configs.size() - 1)
 	var config = null
 	if with_replacement:
@@ -343,10 +342,9 @@ func execute_next_shape():
 	
 
 func execute_translation(action):
-	if active_object == null || !playMode:
+	if active_object == null:
 		return
 	hideResultContainer()
-	print("[DEBUG] execute_translation")
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -357,10 +355,9 @@ func execute_translation(action):
 		_: print('unrecogized translation: ', action)
 
 func execute_rotation(action):
-	if active_object == null || !playMode:
+	if active_object == null:
 		return
 	hideResultContainer()
-	print("[DEBUG] rotation")
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
@@ -370,12 +367,11 @@ func execute_rotation(action):
 
 
 func execute_zoom(action):
-	if active_object == null || !playMode:
+	if active_object == null:
 		return
 	hideResultContainer()
 	var new_scale = null
 	
-	print("[DEBUG] zoom")
 	match action:
 		'zoom_in': new_scale = active_object.scale + Globals.SCALE_DELTA
 		'zoom_out': new_scale = active_object.scale - Globals.SCALE_DELTA
@@ -391,7 +387,6 @@ func execute_zoom(action):
 	active_object.scale = new_scale
 
 func get_screenshot(viewport):
-	print("[DEBUG] screenshot")
 	var screenshot = viewport.get_texture().get_data()
 
 	# the viewport data is vertically flipped. this is a workaround.
@@ -402,11 +397,10 @@ func get_screenshot(viewport):
 	
 	var byte_array = screenshot.get_data()
 	var pixel_data = Array(byte_array)
-	#return byte_array
+
 	return pixel_data
 
 func get_state_msg_for_viewport(viewport, object):
-	print("[DEBUG] get_state_msg")
 	var shape = null if (object == null) else object.shape
 	var id = null if (object == null) else object.id
 	
@@ -419,7 +413,6 @@ func get_state_msg_for_viewport(viewport, object):
 	}
 
 func showResult(isCorrect):
-	print("[DEBUG] showResult")
 	ref_object.visible = false
 	active_object.visible = false
 	
@@ -437,7 +430,6 @@ func showResult(isCorrect):
 	leftResult.visible = true
 
 func hideResultContainer():
-	print("[DEBUG] hideContainer")
 	if ref_object and active_object:
 		ref_object.visible = true
 		active_object.visible = true
@@ -447,7 +439,6 @@ func hideResultContainer():
 func execute_selection(action):
 	if active_object == null:
 		return
-	print("[DEBUG] selection")
 	answered = true
 	var choseSame = "same" in action
 	showResult(choseSame == same)
@@ -459,7 +450,6 @@ func execute_selection(action):
 	
 func toggle_play_mode():
 	# toggle playMode
-	print("[DEBUG] toggle")
 	playMode = !playMode
 
 func publish_state():
@@ -480,9 +470,6 @@ func publish_state():
 		scale = round(active_object.scale.x * 100) / 100.0
 		same = ref_object.id == active_object.id
 	
-
-	
-
 	var msg = {
 		'left_viewport': get_state_msg_for_viewport(left_viewport, ref_object),
 		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
