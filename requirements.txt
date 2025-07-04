@@ -1,9 +1,1 @@
-# on linux (ubuntu 18.04) I had to run: "pip3 install --no-cache-dir --force-reinstall -r requirements.txt"
-# as a workaround for install issues
-jupyterlab
-matplotlib
 pyzmq
-seaborn
-sklearn
-tensorflow==2.6.0
-tensorflow-addons
