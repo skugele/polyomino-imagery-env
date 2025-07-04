@@ -26,10 +26,12 @@ ACTION_MAP = {'W': 'up',
               'Q': 'rotate_counterclockwise',
               'E': 'rotate_clockwise',
               '+': 'zoom_in',
-              '_': 'zoom_out',
+              '-': 'zoom_out',
               'N': 'next_shape',
               '1': 'select_same_shape',
               '0': 'select_different_shape'}
+
+ACTION_IDS = list(ACTION_MAP.keys())
 
 verbose = False
 seqno = 1  # current request's sequence number
@@ -103,7 +105,8 @@ if __name__ == '__main__':
         # MAIN LOOP: receive action via CLI, and send it to GAB action listener
         print('Select an action ID followed by [ENTER]. (All others quit.)')
         while True:
-            action = input('>> A, W, S, D, Q, E, +, -, or N? (0|1 to select the answer) ').upper()
+            # displays available action ids on each prompt
+            action = input(f'>> {", ".join(ACTION_IDS[0:-1])}, or {ACTION_IDS[-1]}? ').upper()
             if action not in ACTION_MAP:
                 break
 
