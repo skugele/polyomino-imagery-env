@@ -37,6 +37,12 @@ var publish_timer = Timer.new()
 onready var unpublished_change = true
 
 
+# check if the shapes are same
+onready var same = false
+onready var playMode = true
+onready var answered = false
+
+
 ########################
 # Child Node Variables #
 ########################
@@ -51,6 +57,8 @@ onready var bottom_boundary = $viewport_controller/right_viewport_container/righ
 onready var left_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/left
 onready var right_boundary = $viewport_controller/right_viewport_container/right_viewport/boundaries/right
 
+onready var rightResult = $viewport_controller/right_viewport_container/right_viewport/rightResult
+onready var leftResult = $viewport_controller/left_viewport_container/left_viewport/leftResult
 
 ###################################
 # Godot-AI-Bridge (GAB) Variables #
@@ -105,6 +113,9 @@ func initialize_polyomino_configs():
 
 
 func _input(event):	
+	
+	#hideResultContainer() # hide it initially 
+	
 	if event.is_action_pressed("ui_up"):
 		last_action_seqno += 1
 		add_action('up', last_action_seqno)
@@ -132,6 +143,15 @@ func _input(event):
 	elif event.is_action_pressed("ui_next_shape"):
 		last_action_seqno += 1		
 		add_action('next_shape', last_action_seqno)
+	elif event.is_action_pressed("ui_toggle_playMode"):
+		last_action_seqno += 1
+		toggle_play_mode()
+	elif event.is_action_pressed("ui_select_same"):
+		last_action_seqno += 1
+		add_action("select_same_shape", last_action_seqno)
+	elif event.is_action_pressed("ui_select_different"):
+		last_action_seqno += 1
+		add_action("select_different_shape", last_action_seqno)
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -159,6 +179,8 @@ func _process(_delta):
 		active_object.global_position += corrective_dir
 		
 	else:
+		if pending_actions.size() <= 0:
+			return
 		var pending_action = pending_actions.pop_back()
 		if pending_action:
 			# activity - stop time-based publication
@@ -206,12 +228,20 @@ func add_action(action, seqno):
 func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
-	
+		
+	if answered and action != "next_shape":
+		return
+		
+	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
+		return
+
+		
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
 		'zoom_in', 'zoom_out': execute_zoom(action)
 		'next_shape': execute_next_shape()
+		"select_same_shape", "select_different_shape": execute_selection(action)
 				
 		# default case: unrecognized action
 		_: print('unrecogized action: ', action)
@@ -258,6 +288,7 @@ func update_ref_image(new_object):
 	# remove last polyomino from scene
 	if ref_object != null:
 		left_viewport.remove_child(ref_object)
+		ref_object.queue_free()
 		ref_object = null
 	
 	left_viewport.add_child(new_object)
@@ -268,6 +299,7 @@ func update_active_image(new_object):
 	# remove last polyomino from scene
 	if active_object != null:
 		right_viewport.remove_child(active_object)
+		active_object.queue_free()
 		active_object = null
 			
 	right_viewport.add_child(new_object)
@@ -281,11 +313,13 @@ func get_random_config(with_replacement=true):
 		config = polyomino_configs[index]
 	else:
 		config = polyomino_configs.pop_left()
+	print(config)
 	return config
 	
 	
 func execute_next_shape():
-	var same = rng.randi() % 2 == 0
+	hideResultContainer()
+	same = rng.randi() % 2 == 0
 
 	# retrieve configuration details needed to create next polyomino object
 	var ref_config = get_random_config()
@@ -304,11 +338,13 @@ func execute_next_shape():
 	
 	randomize_object(active_object)
 	
+	answered = false
+	
 
 func execute_translation(action):
 	if active_object == null:
 		return
-		
+	hideResultContainer()
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -321,7 +357,7 @@ func execute_translation(action):
 func execute_rotation(action):
 	if active_object == null:
 		return
-		
+	hideResultContainer()
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
@@ -333,7 +369,7 @@ func execute_rotation(action):
 func execute_zoom(action):
 	if active_object == null:
 		return
-	
+	hideResultContainer()
 	var new_scale = null
 	
 	match action:
@@ -359,7 +395,10 @@ func get_screenshot(viewport):
 	# single value per pixel representing luminance (8-bit depth)
 	screenshot.convert(Image.FORMAT_L8)
 	
-	return screenshot.get_data()
+	var byte_array = screenshot.get_data()
+	var pixel_data = Array(byte_array)
+
+	return pixel_data
 
 func get_state_msg_for_viewport(viewport, object):
 	var shape = null if (object == null) else object.shape
@@ -372,15 +411,81 @@ func get_state_msg_for_viewport(viewport, object):
 		'id' : id,
 		'screenshot' : screenshot
 	}
+
+func showResult(isCorrect):
+	ref_object.visible = false
+	active_object.visible = false
 	
+	# Red-Dark: Incorrect
+	# Dark-Green: Correct
+	if isCorrect:
+		rightResult.color = Color.green
+		leftResult.color = Color.black
+	else:
+		leftResult.color = Color.red
+		rightResult.color = Color.black
+		
+	
+	rightResult.visible = true
+	leftResult.visible = true
+
+func hideResultContainer():
+	if ref_object and active_object:
+		ref_object.visible = true
+		active_object.visible = true
+	rightResult.visible = false
+	leftResult.visible = false
+	
+func execute_selection(action):
+	if active_object == null:
+		return
+	answered = true
+	var choseSame = "same" in action
+	showResult(choseSame == same)
+	var is_correct = same if choseSame else !same
+
+	gab.send("/polyomino/selection-result/", {
+		"result": is_correct
+	})
+	
+func toggle_play_mode():
+	# toggle playMode
+	playMode = !playMode
+
 func publish_state():
 	# TODO: move this into a global variable
 	var topic = '/polyomino-world/state'
+	
+	var delta_rot = null
+	var translation = null
+	var scale = null
+	var same = true
+	
+	
+	if (active_object and ref_object):
+		delta_rot = fposmod(rad2deg(active_object.rotation - ref_object.rotation), 360)
+		delta_rot = round(delta_rot * 100) / 100.0
+		translation = active_object.global_position.distance_to(ref_object.global_position)
+		translation = round(translation * 100) / 100.0
+		scale = round(active_object.scale.x * 100) / 100.0
+		same = ref_object.id == active_object.id
+	
 	var msg = {
 		'left_viewport': get_state_msg_for_viewport(left_viewport, ref_object),
 		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
-		'last_action_seqno': self.last_action_seqno
+		'last_action_seqno': self.last_action_seqno,
+		'same': same,
+		'playMode': playMode,
+		"transformations": {
+			"rotation_active": delta_rot,
+			"scale": scale,
+			"translation": translation
+		}
+
 	}
+	
+	
+	#msg = JSON.print(msg)
 	
 	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages 
 	# are also given a "header" element containing a unique sequence numbers (seqno) and timestamp 
@@ -407,10 +512,16 @@ func _on_event_requested(event_details):
 	var event = event_details['data']['event']
 	var header = event_details['header']
 	
+	print(event, header)
+	
 	if event['type'] == 'action':
 		var seqno = header['seqno']
 		var action = event['value']
 		
+		gab.send("/polyomino/action_requested", {
+			"action": action,
+			"seqno": seqno
+		})
 		add_action(action, seqno)
 
 

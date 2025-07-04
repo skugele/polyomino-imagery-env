@@ -15,9 +15,6 @@ script = ExtResource( 2 )
 [node name="viewport_controller" type="Control" parent="."]
 margin_right = 128.0
 margin_bottom = 128.0
-__meta__ = {
-"_edit_use_anchors_": false
-}
 
 [node name="left_viewport_container" type="ViewportContainer" parent="viewport_controller"]
 margin_right = 128.0
@@ -27,6 +24,11 @@ margin_bottom = 128.0
 size = Vector2( 128, 128 )
 handle_input_locally = false
 render_target_update_mode = 3
+
+[node name="leftResult" type="ColorRect" parent="viewport_controller/left_viewport_container/left_viewport"]
+visible = false
+margin_right = 255.0
+margin_bottom = 255.0
 
 [node name="right_viewport_container" type="ViewportContainer" parent="viewport_controller"]
 margin_left = 129.0
@@ -60,6 +62,11 @@ modulate = Color( 0.290196, 1, 0, 1 )
 position = Vector2( 66, 64 )
 scale = Vector2( 0.25, 0.25 )
 texture = ExtResource( 4 )
+
+[node name="rightResult" type="ColorRect" parent="viewport_controller/right_viewport_container/right_viewport"]
+visible = false
+margin_right = 255.0
+margin_bottom = 255.0
 
 [connection signal="event_requested" from="GabLib" to="." method="_on_event_requested"]
 [connection signal="boundary_entered" from="viewport_controller/right_viewport_container/right_viewport/boundaries/top" to="." method="_on_boundary_entered"]
