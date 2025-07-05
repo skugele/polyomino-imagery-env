@@ -5,11 +5,13 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     x11-xserver-utils libzmq5
 
-COPY . /app
+COPY ./godot /app
 
 WORKDIR /app
 
 ENV SDL_AUDIODRIVER=dummy
 ENV GODOT_DISABLE_AUDIO=1
+
+EXPOSE 10001 10002
 
 CMD xvfb-run ./runEnv.x86_64
