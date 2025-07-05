@@ -17,17 +17,17 @@ The Docker commands given below use default container/host-port mappings (e.g.,
 A Docker image for this environment can be built from a Unix-like CLI by
 executing the following command from the top-level project directory.
 ```
-$ docker build -t polyomino-env:latest .
+docker build -t polyomino-env:latest .
 ```
 ### Running Docker Container (Interactive Mode)
 Ensure that an X11 server is running and execute the following command to run the environment in interactive mode:
 
 ```
-$ docker run -it --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
+docker run -it --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
 
 Note: Running the environment under Git Bash also requires a pseudo-terminal emulator (e.g., winpty). For example,
 
 ```
-$ winpty docker run -it --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
+winpty docker run -it --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
