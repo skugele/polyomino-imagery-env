@@ -78,7 +78,7 @@ onready var gab_options = {
 	},
 
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 3  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+	'verbosity': 0  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
 
@@ -313,7 +313,10 @@ func get_random_config(with_replacement=true):
 		config = polyomino_configs[index]
 	else:
 		config = polyomino_configs.pop_left()
-	print(config)
+		
+	if Globals.DEBUG_MODE:
+		print(config)
+		
 	return config
 	
 	
