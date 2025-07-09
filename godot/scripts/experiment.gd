@@ -40,7 +40,7 @@ onready var unpublished_change = true
 # check if the shapes are same
 onready var same = false
 onready var playMode = true
-onready var answered = false
+onready var answered = true # initially true to force next shape action when the environment is first started with blank screen
 
 
 ########################
@@ -229,9 +229,9 @@ func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
 		
-	if answered and action != "next_shape":
+	if answered != (action == "next_shape"):
 		return
-		
+
 	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
 		return
 
