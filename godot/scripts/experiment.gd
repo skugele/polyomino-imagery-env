@@ -229,9 +229,6 @@ func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
 		
-	if answered and action != "next_shape":
-		return
-		
 	if answered != (action == "next_shape"):
 		return
 
