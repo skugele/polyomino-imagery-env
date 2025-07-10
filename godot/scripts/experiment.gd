@@ -40,7 +40,7 @@ onready var unpublished_change = true
 # check if the shapes are same
 onready var same = false
 onready var playMode = true
-onready var answered = false
+onready var answered = true # initially true to force next shape action when the environment is first started with blank screen
 
 
 ########################
@@ -78,7 +78,7 @@ onready var gab_options = {
 	},
 
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 3  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+	'verbosity': 0  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
 
@@ -113,8 +113,6 @@ func initialize_polyomino_configs():
 
 
 func _input(event):	
-	
-	#hideResultContainer() # hide it initially 
 	
 	if event.is_action_pressed("ui_up"):
 		last_action_seqno += 1
@@ -188,6 +186,7 @@ func _process(_delta):
 				publish_timer.stop()
 				
 			execute(pending_action['action'])
+			
 			last_action_seqno = pending_action['seqno']
 			unpublished_change = true
 		else:
@@ -229,13 +228,14 @@ func execute(action):
 	if Globals.DEBUG_MODE:
 		print('executing action: ', action)
 		
-	if answered and action != "next_shape":
+	if answered != (action == "next_shape"):
 		return
-		
+
 	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
 		return
 
-		
+	hideResultContainer()
+	
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -313,12 +313,14 @@ func get_random_config(with_replacement=true):
 		config = polyomino_configs[index]
 	else:
 		config = polyomino_configs.pop_left()
-	print(config)
+		
+	if Globals.DEBUG_MODE:
+		print(config)
+		
 	return config
 	
 	
 func execute_next_shape():
-	hideResultContainer()
 	same = rng.randi() % 2 == 0
 
 	# retrieve configuration details needed to create next polyomino object
@@ -344,7 +346,7 @@ func execute_next_shape():
 func execute_translation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -357,7 +359,7 @@ func execute_translation(action):
 func execute_rotation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
@@ -369,7 +371,7 @@ func execute_rotation(action):
 func execute_zoom(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	var new_scale = null
 	
 	match action:
@@ -459,7 +461,8 @@ func publish_state():
 	var delta_rot = null
 	var translation = null
 	var scale = null
-	var same = true
+	
+	same = true
 	
 	
 	if (active_object and ref_object):

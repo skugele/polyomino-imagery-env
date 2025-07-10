@@ -1,18 +1,11 @@
 import gymnasium as gym
 import zmq, json, time
 from enum import Enum
-from itertools import cycle
-import numpy as np
-import tensorflow as tf
-import pandas as pd
-from BVAE import BVAE
 import logging
-from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='polyomino_env.log', filemode='a')
 logging.info("============== Polyomino Environment initialized ================")
-
-BVAE_MODEL_PATH = "BVAE_Models/bvae_32dims_90acc.keras"
 
 class Actions(Enum):
     UP = 0
@@ -28,7 +21,7 @@ class Actions(Enum):
     SELECT_DIFFERENT = 10
 
 class PolyominoEnvironment(gym.Env):
-    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000, BVAE_MODEL_PATH = BVAE_MODEL_PATH):
+    def __init__(self, PORT = 10002, LISTENER_PORT = 10001, HOST = 'localhost', TIMEOUT = 5000, MSG_TIMEOUT_FILTER = '', MAX_TIMESTEPS = 1000):
         self.ACTION_MAP = {
               'W': 'up',
               'S': 'down',
@@ -43,8 +36,6 @@ class PolyominoEnvironment(gym.Env):
               '0': 'select_different_shape'
         }
         self.index = 0
-
-        self.bvae_model = self._load_bvae(BVAE_MODEL_PATH)
 
         self.ACTION_KEYS = list(self.ACTION_MAP.keys())
         self.ACTION_DESC = list(self.ACTION_MAP.values())
@@ -69,12 +60,13 @@ class PolyominoEnvironment(gym.Env):
         self.latest_env_state = None
 
         self.answered = False
-
-        latent_dimensions = self.bvae_model.latent_dims
+        
+        # 128 x 128 pixel images with 1 channel (grayscale)
         self.observation_space = gym.spaces.Dict({
-            "left": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(latent_dimensions,), dtype=np.float32),
-            "right": gym.spaces.Box(low=-np.inf, high=np.inf, shape=(latent_dimensions,), dtype=np.float32),
+            "left": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=np.uint8),
+            "right": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=np.uint8),
         })
+
 
         self.context = zmq.Context()
         self._connect()
@@ -99,13 +91,6 @@ class PolyominoEnvironment(gym.Env):
         }
 
         return {'header': header, 'data': data}
-
-
-    def _load_bvae(self, path):
-        bvae_model = tf.keras.models.load_model(path, custom_objects = {'BVAE': BVAE})
-        print(f"Loading Model with latent dimensions {bvae_model.latent_dims}")
-        print(bvae_model.summary())
-        return bvae_model
     
     def _send(self, data):
         self.seqno += 1
@@ -148,48 +133,6 @@ class PolyominoEnvironment(gym.Env):
                     }
                     return payload
         raise TimeoutError(f"Timeout waiting for environment state update with seqNo {seqNo}")
- 
-    def _encode_state(self, left, right):
-            left = tf.convert_to_tensor(left, dtype=tf.float32)
-            right = tf.convert_to_tensor(right, dtype=tf.float32)
-            left, right = tf.reshape(left, (128, 128, 1)), tf.reshape(right, (128, 128, 1))
-            inputs = tf.stack([left, right], axis=0)  # Shape: (2, 128, 128, 1)
-            mu, _, _, _ = self.bvae_model.encode(inputs)
-            mu_left, mu_right = mu[0], mu[1]
-
-            self.index += 1
-            decoded_x = self.bvae_model.decode(mu)
-
-            #plot the decoded image
-            # print("SHowing decoded image for left viewport:")
-            # import matplotlib.pyplot as plt
-            # left_img = left[:, :, 0]
-            # right_img = right[:, :, 0]
-            # decoded_left_img = decoded_x[0, :, :, 0]
-            # decoded_right_img = decoded_x[1, :, :, 0]
-
-            # fig, axs = plt.subplots(2, 2, figsize=(10, 8))
-
-            # axs[0, 0].imshow(left_img, cmap='gray')
-            # axs[0, 0].set_title(f'Original Left\nAvg pixel: {np.mean(left_img):.2f}')
-            # axs[0, 0].axis('off')
-
-            # axs[0, 1].imshow(decoded_left_img, cmap='gray')
-            # axs[0, 1].set_title(f'Reconstructed Left\nAvg pixel: {np.mean(decoded_left_img):.2f}')
-            # axs[0, 1].axis('off')
-
-            # axs[1, 0].imshow(right_img, cmap='gray')
-            # axs[1, 0].set_title(f'Original Right\nAvg pixel: {np.mean(right_img):.2f}')
-            # axs[1, 0].axis('off')
-
-            # axs[1, 1].imshow(decoded_right_img, cmap='gray')
-            # axs[1, 1].set_title(f'Reconstructed Right\nAvg pixel: {np.mean(decoded_right_img):.2f}')
-            # axs[1, 1].axis('off')
-
-            # plt.savefig(f'reconstructed_images/decoded_viewports_{self.index}.png')
-            # plt.close(fig)
-
-            return mu_left, mu_right
 
     def _check_selection(self, selected_same):
         return self.latest_env_state["isSame"] == selected_same
@@ -223,14 +166,14 @@ class PolyominoEnvironment(gym.Env):
         self.current_problem = 0
 
         left, right = self.latest_env_state["state"]
-        mu_left, mu_right = self._encode_state(left, right)
 
         self.answered= False
 
         observation = {
-            "left": mu_left.numpy(),
-            "right": mu_right.numpy(),
+            "left": np.array(left, dtype=np.uint8).reshape(128, 128, 1),
+            "right": np.array(right, dtype=np.uint8).reshape(128, 128, 1)
         }
+
 
         info = {}
         return (observation, info)
@@ -252,17 +195,14 @@ class PolyominoEnvironment(gym.Env):
             self.answered= False # reset after choosing the next shape
 
         left, right = self.latest_env_state["state"]
-        mu_left, mu_right = self._encode_state(left, right)
-        cosine_sim = cosine_similarity(mu_left.numpy().reshape(1, -1), mu_right.numpy().reshape(1, -1))[0][0]
 
         observation = {
-            "left": mu_left.numpy(),
-            "right": mu_right.numpy(),
+            "left": np.array(left, dtype=np.uint8).reshape(128, 128, 1),
+            "right": np.array(right, dtype=np.uint8).reshape(128, 128, 1)
         }
 
-        info = {
-            "cosine_similarity": cosine_sim,
-        }
+
+        info = {}
         # terminated = self.MAX_TIMESTEPS <= self.current_timestep;
         terminated = self.MAX_PROBLEMS <= self.current_problem
         truncated = False
@@ -283,4 +223,5 @@ are the actions hidden to the agent based on the playMode?; currently agent can 
 
 different approach to listener msgs.: use sqn no to sync the data
 """
+
 
