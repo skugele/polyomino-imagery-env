@@ -4,124 +4,93 @@
 # Description: Used to submit commands (actions) to the Polyomino Imagery Environment
 # Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
-import json
 import argparse
-import sys
 import os
-import time
+import sys
 
-import zmq  # Python Bindings for ZeroMq (PyZMQ)
-
-DEFAULT_TIMEOUT = 5000  # in milliseconds
-
-DEFAULT_AGENT = 1
-DEFAULT_HOST = 'localhost'
-DEFAULT_PORT = 10002
+from shared import DEFAULT_ACTION_PORT
+from shared import add_host_arg
+from shared import add_port_arg
+from shared import add_verbose_arg
+from shared import create_action_request
+from shared import get_action_publisher
+from shared import send
 
 # maps single character user inputs from command line to Godot agent actions
-ACTION_MAP = {'W': 'up',
-              'S': 'down',
-              'A': 'left',
-              'D': 'right',
-              'Q': 'rotate_counterclockwise',
-              'E': 'rotate_clockwise',
-              '+': 'zoom_in',
-              '-': 'zoom_out',
-              'N': 'next_shape',
-              '1': 'select_same_shape',
-              '0': 'select_different_shape'}
+ACTION_MAP = {
+    "W": "up",
+    "S": "down",
+    "A": "left",
+    "D": "right",
+    "Q": "rotate_counterclockwise",
+    "E": "rotate_clockwise",
+    "+": "zoom_in",
+    "-": "zoom_out",
+    "N": "next_shape",
+    "1": "select_same_shape",
+    "0": "select_different_shape",
+}
 
 ACTION_IDS = list(ACTION_MAP.keys())
 
-verbose = False
-seqno = 1  # current request's sequence number
-
 
 def parse_args():
-    """ Parses command line arguments.
+    """Parses command line arguments.
 
-    :return: argparse parser with parsed command line args
+    Returns:
+        argparse.Namespace: Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description='Polyomino Imagery Environment - Action Client')
+    parser = argparse.ArgumentParser(
+        description="Polyomino Imagery Environment - Action Client"
+    )
 
-    parser.add_argument('--id', type=int, required=False, default=DEFAULT_AGENT,
-                        help=f'the id of the agent to which this action will be sent (default: {DEFAULT_AGENT})')
-    parser.add_argument('--host', type=str, required=False, default=DEFAULT_HOST,
-                        help=f'the IP address of host running the GAB action listener (default: {DEFAULT_HOST})')
-    parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
-                        help=f'the port number of the GAB action listener (default: {DEFAULT_PORT})')
-    parser.add_argument('--verbose', required=False, action="store_true",
-                        help='increases verbosity (displays requests & replies)')
+    add_host_arg(parser)
+    add_port_arg(parser, default_port=DEFAULT_ACTION_PORT)
+    add_verbose_arg(parser)
 
     return parser.parse_args()
 
 
-def connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
-    """ Establishes a connection to Godot AI Bridge action listener.
-
-    :param host: the GAB action listener's host IP address
-    :param port: the GAB action listener's port number
-    :return: socket connection
-    """
-    socket = zmq.Context().socket(zmq.REQ)
-    socket.connect(f'tcp://{host}:{str(port)}')
-
-    # without timeout the process can hang indefinitely
-    socket.setsockopt(zmq.RCVTIMEO, DEFAULT_TIMEOUT)
-    return socket
-
-
-def send(connection, request):
-    """ Encodes request and sends it to the GAB action listener.
-
-    :param connection: connection: a connection to the GAB action listener
-    :param request: a dictionary containing the action request payload
-    :return: GAB action listener's (SUCCESS or ERROR) reply
-    """
-    encoded_request = json.dumps(request)
-    connection.send_string(encoded_request)
-    return connection.recv_json()
-
-
-def create_request(data):
-    global seqno
-    header = {
-        'seqno': seqno,
-        'time': round(time.time() * 1000)  # current time in milliseconds
-    }
-
-    return {'header': header, 'data': data}
-
-
-if __name__ == '__main__':
+def main():
+    """Main entry point for the script."""
     try:
         args = parse_args()
-        connection = connect(host=args.host, port=args.port)
+        connection = get_action_publisher(host=args.host, port=args.port)
 
-        # a global action counter (included in request payload)
-        action_id = 0
-        agent_id = args.id
+        seqno = 1  # current request's sequence number
 
         # MAIN LOOP: receive action via CLI, and send it to GAB action listener
-        print('Select an action ID followed by [ENTER]. (All others quit.)')
+        print("Select an action ID followed by [ENTER]. (All other keys quit.)")
         while True:
             # displays available action ids on each prompt
-            action = input(f'>> {", ".join(ACTION_IDS[0:-1])}, or {ACTION_IDS[-1]}? ').upper()
+            action = input(
+                f'>> {", ".join(ACTION_IDS[0:-1])}, or {ACTION_IDS[-1]}? '
+            ).upper()
+
             if action not in ACTION_MAP:
                 break
 
-            request = create_request(data={'event':{'type':'action', 'value':ACTION_MAP[action]}})
+            request = create_action_request(
+                data={"event": {"type": "action", "value": ACTION_MAP[action]}},
+                seqno=seqno,
+            )
+
             reply = send(connection, request)
 
             if args.verbose:
-                print(f'\t REQUEST: {request}')
-                print(f'\t REPLY: {reply}')
+                print(f"\t REQUEST: {request}")
+                print(f"\t REPLY: {reply}")
 
             seqno += 1
 
     except KeyboardInterrupt:
+        print("Interrupted by user. Shutting down...", flush=True)
 
-        try:
-            sys.exit(1)
-        except SystemExit:
-            os._exit(1)
+    try:
+        sys.exit(1)
+    except SystemExit:
+        os._exit(1)
+
+
+if __name__ == "__main__":
+    main()
