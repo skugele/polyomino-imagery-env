@@ -106,11 +106,13 @@ class PolyominoMetrics:
         if self.last_state['same'] is not None:
             if self.last_state['same']:
                 if result:
+                    print(f"Correct selection for same shape at seqno {seqno}")
                     self.performance_data['same_shape_correct'] += 1
                 else:
                     print(f"Incorrect selection for same shape at seqno {seqno}")
             else:
-                if not result:
+                if result:
+                    print(f"Correct selection for different shape at seqno {seqno}")
                     self.performance_data['different_shape_correct'] += 1
                 else:
                     print(f"Incorrect selection for different shape at seqno {seqno}")

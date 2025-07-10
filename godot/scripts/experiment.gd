@@ -234,6 +234,8 @@ func execute(action):
 
 	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
 		return
+		
+	hideResultContainer()
 
 		
 	match action:
@@ -318,7 +320,6 @@ func get_random_config(with_replacement=true):
 	
 	
 func execute_next_shape():
-	hideResultContainer()
 	same = rng.randi() % 2 == 0
 
 	# retrieve configuration details needed to create next polyomino object
@@ -344,7 +345,7 @@ func execute_next_shape():
 func execute_translation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -357,7 +358,6 @@ func execute_translation(action):
 func execute_rotation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
@@ -369,7 +369,7 @@ func execute_rotation(action):
 func execute_zoom(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	var new_scale = null
 	
 	match action:
@@ -416,15 +416,20 @@ func showResult(isCorrect):
 	ref_object.visible = false
 	active_object.visible = false
 	
+	
 	# Red-Dark: Incorrect
 	# Dark-Green: Correct
-	if isCorrect:
-		rightResult.color = Color.green
-		leftResult.color = Color.black
-	else:
-		leftResult.color = Color.red
-		rightResult.color = Color.black
-		
+	var ref_shape_id = 31 if isCorrect else 30
+	var active_shape_id = 30 if isCorrect else 31
+
+	leftResult.color = Color.black if isCorrect else Color.red
+	rightResult.color = Color.green if isCorrect else Color.black
+
+	ref_object.shape = ref_shape_id
+	ref_object.id = ref_shape_id
+
+	active_object.shape = active_shape_id
+	active_object.id = active_shape_id
 	
 	rightResult.visible = true
 	leftResult.visible = true
