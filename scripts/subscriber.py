@@ -27,7 +27,7 @@ def parse_args():
         argparse.Namespace: Parsed command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Polyomino Imagery Environment State Listener"
+        description="Polyomino Imagery Environment - State Listener"
     )
 
     add_host_arg(parser)
