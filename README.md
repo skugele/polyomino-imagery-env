@@ -26,14 +26,19 @@ docker build -t polyomino-env:latest .
 ### Running the Docker Container in Interactive Mode (GUI Enabled)
 GUI mode is useful for launching the environment for human subjects or for directly monitoring software agents as they interact with the environment.
 
-Ensure that an X11 server is running and execute the following command to run the environment in interactive mode:
+Ensure that an X11 server is running and execute the following command (based on your OS and terminal) to run the environment in interactive mode:
 
+#### Linux/Unix
+```
+docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=$DISPLAY polyomino-env:latest
+```
+
+#### Windows (Powershell)
 ```
 docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
 
-Note: Running the environment under Git Bash also requires a pseudo-terminal emulator (e.g., winpty). For example,
-
+#### Windows (Bash)
 ```
 winpty docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
