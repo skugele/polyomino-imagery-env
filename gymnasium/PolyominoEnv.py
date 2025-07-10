@@ -2,6 +2,7 @@ import gymnasium as gym
 import zmq, json, time
 from enum import Enum
 import logging
+import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='polyomino_env.log', filemode='a')
 logging.info("============== Polyomino Environment initialized ================")
@@ -62,8 +63,8 @@ class PolyominoEnvironment(gym.Env):
         
         # 128 x 128 pixel images with 1 channel (grayscale)
         self.observation_space = gym.spaces.Dict({
-            "left": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=int),
-            "right": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=int),
+            "left": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=np.uint8),
+            "right": gym.spaces.Box(low=0, high=255, shape=(128, 128, 1), dtype=np.uint8),
         })
 
 
@@ -169,9 +170,10 @@ class PolyominoEnvironment(gym.Env):
         self.answered= False
 
         observation = {
-            "left": left,
-            "right": right,
+            "left": np.array(left, dtype=np.uint8).reshape(128, 128, 1),
+            "right": np.array(right, dtype=np.uint8).reshape(128, 128, 1)
         }
+
 
         info = {}
         return (observation, info)
@@ -195,9 +197,10 @@ class PolyominoEnvironment(gym.Env):
         left, right = self.latest_env_state["state"]
 
         observation = {
-            "left": left,
-            "right": right,
+            "left": np.array(left, dtype=np.uint8).reshape(128, 128, 1),
+            "right": np.array(right, dtype=np.uint8).reshape(128, 128, 1)
         }
+
 
         info = {}
         # terminated = self.MAX_TIMESTEPS <= self.current_timestep;
@@ -220,4 +223,5 @@ are the actions hidden to the agent based on the playMode?; currently agent can 
 
 different approach to listener msgs.: use sqn no to sync the data
 """
+
 
