@@ -1,4 +1,6 @@
 import argparse
+import os
+import sys
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -12,27 +14,6 @@ from shared import get_state_subscriber
 from shared import receive
 from shared import reset_shutdown_timer
 from shared import shutdown_event
-
-# def get_listener():
-#     context = zmq.Context()
-#     listener = context.socket(zmq.SUB)
-#     listener.setsockopt_string(zmq.SUBSCRIBE, "")
-#     listener.setsockopt(zmq.RCVTIMEO, TIMEOUT)  # Set a timeout of 36000 ms
-#     listener.connect(f"tcp://{HOST}:{LISTENER_PORT}")
-#     return listener
-#
-# def receive(listener):
-#     poller = zmq.Poller()
-#     poller.register(listener, zmq.POLLIN)
-#     socks = dict(poller.poll(TIMEOUT))
-#     if listener in socks and socks[listener] == zmq.POLLIN:
-#         msg = listener.recv_string()
-#         ndx = msg.find('{')
-#         topic, encoded_payload = msg[0:ndx - 1], msg[ndx:]
-#         payload = json.loads(encoded_payload)
-#         return topic, payload
-#     raise zmq.Again("No message received within timeout")
-
 
 """ Sample Responses
 /polyomino/action_requested {'data': {'action': 'select_same_shape', 'seqno': 1}, 'header': {'seqno': 6, 'time': 1751298299749}}
@@ -116,7 +97,8 @@ class PolyominoMetrics:
         """Process selection result"""
         result = payload['data']['result']
         seqno = payload['header']['seqno']
-        timestamp = payload['header']['time']
+
+        # timestamp = payload['header']['time']
 
         if result:
             self.performance_data['correct_answers'] += 1
@@ -313,7 +295,8 @@ def main():
                     # Print periodic updates
                     if metrics.performance_data['total_attempts'] > 0 and \
                             metrics.performance_data['total_attempts'] % 10 == 0:
-                        print(f"\n--- Performance Update (After {metrics.performance_data['total_attempts']} attempts) ---")
+                        print(
+                            f"\n--- Performance Update (After {metrics.performance_data['total_attempts']} attempts) ---")
                         stats = metrics.calculate_statistics()
                         print(f"Current Accuracy: {stats['overall_accuracy']:.2f}%")
                         print(f"Same Shape Accuracy: {stats['same_shape_accuracy']:.2f}%")
@@ -327,13 +310,19 @@ def main():
                     print("Waiting for messages...", flush=True)
 
     except KeyboardInterrupt:
-        metrics.print_detailed_report()
+        pass
 
-        # Create visualizations
-        if metrics.performance_data['total_attempts'] > 0:
-            print("Creating performance visualizations...")
-            metrics.plot_performance_summary(save_path="performance_summary.png")
-            metrics.plot_3d_transformations(save_path="3d_transformations.png")
+    # Create visualizations
+    if metrics.performance_data['total_attempts'] > 0:
+        print("Creating performance visualizations...")
+        metrics.print_detailed_report()
+        metrics.plot_performance_summary(save_path="performance_summary.png")
+        metrics.plot_3d_transformations(save_path="3d_transformations.png")
+
+    try:
+        sys.exit(1)
+    except SystemExit:
+        os._exit(1)
 
 
 if __name__ == "__main__":
