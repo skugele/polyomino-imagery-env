@@ -38,7 +38,7 @@ docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY
 docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
 
-#### Windows (Bash)
+#### Windows (Git Bash)
 ```
 winpty docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e DISPLAY=host.docker.internal:0.0 polyomino-env:latest
 ```
