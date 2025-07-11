@@ -87,7 +87,6 @@ def main():
             topic, payload = receive(connection)
 
             if payload:
-                print(f"topic: {topic}; payload: {payload}", flush=True)
                 viewport_data = payload['data']['right_viewport']
                 filepath = get_screenshot_filepath(
                     args.savepath, payload, viewport_data, 'png')
@@ -95,10 +94,13 @@ def main():
                 screenshot = get_screenshot(viewport_data)
                 save_screenshot(screenshot, filepath)
 
+                print(f'Image received: {payload["header"]}. Saved as {filepath}.', flush=True)
+
                 timer = reset_shutdown_timer(args.timeout, timer)
 
                 if args.verbose:
-                    print(f'Image received: {payload["header"]}. Saved as {filepath}.', flush=True)
+                    print(f'Shape: {payload["data"]["right_viewport"]["shape"]}.', flush=True)
+                    print(f'Transformations: {payload["data"]["transformations"]}.', flush=True)
             else:
                 if args.verbose:
                     print("Waiting for messages...", flush=True)
