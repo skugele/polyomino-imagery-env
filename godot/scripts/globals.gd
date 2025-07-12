@@ -1,7 +1,5 @@
 extends Node
 
-const DEBUG_MODE = false
-
 # layer bitmask values
 const BOUNDARY_LAYER = 1
 const OBJECT_LAYER = 2
@@ -45,6 +43,14 @@ func _ready():
 	_create_trominos()
 	_create_tetrominos()
 	_create_pentominos()
+	
+	_initialize_polyomino_configs()
+	
+	_set_mode_from_env()
+	_set_debug_from_env()
+	
+	if debug:			
+		print("Environment running in \"%s\" mode." % [get_mode_name()])
 
 func _create_monominos():
 	var instance = POLYOMINO_SCENE.instance()
@@ -550,3 +556,99 @@ func get_all_objects_for_shape(shape):
 	return shapes
 
 
+# stores dictionary elements that identify the shape and id for polyominos. 
+# the order of these elements determines the order in which they will be 
+# presented at runtime
+var _polyomino_configs = []
+
+func _initialize_polyomino_configs():
+	for shape_name in SHAPES:
+		var shape = SHAPES[shape_name]
+		for id in cardinality(shape):
+			var config = {'shape': shape, 'id': id}
+			_polyomino_configs.append(config)
+
+var _rng = null
+
+func get_rng():
+	if _rng:
+		return _rng
+		
+	_rng = RandomNumberGenerator.new()
+	_rng.randomize()
+	
+	return _rng
+
+func get_random_config(with_replacement=true):
+	var index = get_rng().randi_range(0, _polyomino_configs.size() - 1)
+	var config = null
+	
+	if with_replacement:
+		config = _polyomino_configs[index]
+	else:
+		config = _polyomino_configs.pop_left()
+		
+	if Globals.debug:
+		print(config)
+		
+	return config
+			
+enum mode_enum {PLAY, TEST}
+var  mode = mode_enum.PLAY  # default mode
+
+func get_mode_name():
+	for mode_name in mode_enum.keys():
+		if mode_enum[mode_name] == mode:
+			return mode_name
+			
+	return "unknown"
+	
+func _set_mode_from_env():
+	var value = OS.get_environment("POLYENV_MODE").to_lower()
+	match value:
+		"test":
+			mode = mode_enum.TEST
+		"play":
+			mode = mode_enum.PLAY			
+		_:
+			if value:
+				push_warning("Unsupported mode: \"%s\"." % [value])
+
+var debug = false
+
+func _set_debug_from_env():
+	var value = OS.get_environment("POLYENV_DEBUG").to_lower()
+	
+	if value == "true":
+		debug = true
+	else:
+		debug = false
+				
+# maps ui events to executable actions
+var ui_action_map := {
+	"ui_down":                    "down",
+	"ui_left":                    "left",
+	"ui_next_shape":              "next_shape",
+	"ui_right":                   "right",
+	"ui_rotate_clockwise":        "rotate_clockwise",
+	"ui_rotate_counterclockwise": "rotate_counterclockwise",
+	"ui_select_different":        "select_different_shape",
+	"ui_select_same":             "select_same_shape",
+	"ui_up":                      "up",
+	"ui_zoom_in":                 "zoom_in",
+	"ui_zoom_out":                "zoom_out"
+}
+
+var test_enabled_actions = [
+	"next_shape", 
+	"select_same_shape", 
+	"select_different_shape"
+	]
+	
+	
+func is_action_enabled(action):
+	match mode:
+		mode_enum.TEST:
+			return action in Globals.test_enabled_actions
+		_:
+			return true
