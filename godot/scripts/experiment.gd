@@ -3,7 +3,7 @@
 extends Node2D
 
 
-onready var rng = RandomNumberGenerator.new()
+onready var rng = Globals.get_rng()
 
 ###############################
 # Environment State Variables #
@@ -22,31 +22,26 @@ onready var ref_object = null
 # the active object (right viewport)
 onready var active_object = null
 
-# stores dictionary elements that identify the shape and id for polyominos. the order of these elements
-# determines the order in which they will be presented at runtime
-onready var polyomino_configs = []
-
 ###############################
 # State Publication Variables #
 ###############################
-
+const state_topic = '/polyomino-world/state'
+const action_topic = '/polyomino/action_requested'
+	
 # timer for state (e.g., screenshot) publication to clients
 var publish_timer = Timer.new()
 
 # used to preemptively publish a state change ahead of publish_timer timeout
 onready var unpublished_change = true
 
-
 # check if the shapes are same
 onready var same = false
-onready var playMode = true
-onready var answered = true # initially true to force next shape action when the environment is first started with blank screen
 
+onready var answered = true # initially true to force next shape action when the environment is first started with blank screen
 
 ########################
 # Child Node Variables #
 ########################
-
 onready var left_viewport = $viewport_controller/left_viewport_container/left_viewport
 onready var right_viewport = $viewport_controller/right_viewport_container/right_viewport
 
@@ -78,13 +73,11 @@ onready var gab_options = {
 	},
 
 	# controls Godot-AI-Bridge's console verbosity level (larger numbers -> greater verbosity)
-	'verbosity': 3  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
+	'verbosity': 0  # supported values (-1=FATAL; 0=ERROR; 1=WARNING; 2=INFO; 3=DEBUG; 4=TRACE)
 }
 
 
 func _ready():
-	
-	rng.randomize()
 
 	# this line was added to remove extra "border" lines appearing in screenshots. 
 	# screenshot dimensions were 130x128!
@@ -98,60 +91,17 @@ func _ready():
 	publish_timer.wait_time = Globals.PUBLISH_NO_CHANGE_TIMEOUT
 	publish_timer.connect("timeout", self, "_on_publish_state")
 	add_child(publish_timer)
-	
-	# configures
-	initialize_polyomino_configs()
+			
 
+func _input(event):
+	if not (event is InputEventKey and event.pressed):
+		return
 
-func initialize_polyomino_configs():
-	
-	for shape_name in Globals.SHAPES:
-		var shape = Globals.SHAPES[shape_name]
-		for id in Globals.cardinality(shape):
-			var config = {'shape': shape, 'id': id}
-			polyomino_configs.append(config)
-
-
-func _input(event):	
-	
-	#hideResultContainer() # hide it initially 
-	
-	if event.is_action_pressed("ui_up"):
-		last_action_seqno += 1
-		add_action('up', last_action_seqno)
-	elif event.is_action_pressed("ui_down"):
-		last_action_seqno += 1
-		add_action('down', last_action_seqno)
-	elif event.is_action_pressed("ui_left"):
-		last_action_seqno += 1
-		add_action('left', last_action_seqno)
-	elif event.is_action_pressed("ui_right"):
-		last_action_seqno += 1
-		add_action('right', last_action_seqno)
-	elif event.is_action_pressed("ui_rotate_clockwise"):
-		last_action_seqno += 1
-		add_action('rotate_clockwise', last_action_seqno)
-	elif event.is_action_pressed("ui_rotate_counterclockwise"):
-		last_action_seqno += 1
-		add_action('rotate_counterclockwise', last_action_seqno)
-	elif event.is_action_pressed("ui_zoom_in"):
-		last_action_seqno += 1
-		add_action('zoom_in', last_action_seqno)
-	elif event.is_action_pressed("ui_zoom_out"):
-		last_action_seqno += 1		
-		add_action('zoom_out', last_action_seqno)
-	elif event.is_action_pressed("ui_next_shape"):
-		last_action_seqno += 1		
-		add_action('next_shape', last_action_seqno)
-	elif event.is_action_pressed("ui_toggle_playMode"):
-		last_action_seqno += 1
-		toggle_play_mode()
-	elif event.is_action_pressed("ui_select_same"):
-		last_action_seqno += 1
-		add_action("select_same_shape", last_action_seqno)
-	elif event.is_action_pressed("ui_select_different"):
-		last_action_seqno += 1
-		add_action("select_different_shape", last_action_seqno)
+	for ui_action in Globals.ui_action_map.keys():
+		if event.is_action_pressed(ui_action):
+			last_action_seqno += 1
+			add_action(Globals.ui_action_map[ui_action], last_action_seqno)
+			break
 
 
 # removes and executes the oldest pending action from the queue (if one exists)
@@ -161,7 +111,7 @@ func _process(_delta):
 			
 	# take corrective actions if boundary collisions occurred due to previous updates
 	if has_collision():
-		if Globals.DEBUG_MODE:
+		if Globals.debug:
 			print('handling collisions!')
 		
 		# calculate a movement direction based on the boundaries with collisions
@@ -174,7 +124,7 @@ func _process(_delta):
 				'left' : corrective_dir += Vector2(1, 0)
 				'right' : corrective_dir += Vector2(-1, 0)
 				
-				_: print('unknown boundary: ', boundary)
+				_: push_warning('unknown boundary: %s' % [boundary])
 				
 		active_object.global_position += corrective_dir
 		
@@ -188,6 +138,7 @@ func _process(_delta):
 				publish_timer.stop()
 				
 			execute(pending_action['action'])
+			
 			last_action_seqno = pending_action['seqno']
 			unpublished_change = true
 		else:
@@ -215,27 +166,32 @@ func get_colliding_boundaries():
 
 # adds an action to the agent's pending_actions queue for later execution
 func add_action(action, seqno):	
-	if Globals.DEBUG_MODE:
+	if Globals.debug:
 		print('adding action: ', action)
 	
 	if len(pending_actions) > Globals.MAX_PENDING_ACTIONS:
 		var dropped_actions = pending_actions.pop_back()
-		print('Max queue depth reached. Dropping oldest pending action with value %s.' % dropped_actions)
+		push_warning('Max queue depth reached. Dropping oldest pending action with value %s.' % dropped_actions)
 	
 	pending_actions.push_front({'seqno': seqno, 'action': action})
 
 
 func execute(action):
-	if Globals.DEBUG_MODE:
+	if Globals.debug:
 		print('executing action: ', action)
 		
+	if not Globals.is_action_enabled(action):
+		if Globals.debug:
+			print('action disabled by mode')
+			
+		return
+	
+	# XOR
 	if answered != (action == "next_shape"):
 		return
 
-	if not playMode and not (action in ["next_shape", "select_same_shape", "select_different_shape"]):
-		return
-
-		
+	hideResultContainer()
+	
 	match action:
 		'up', 'down', 'left', 'right': execute_translation(action)
 		'rotate_clockwise', 'rotate_counterclockwise': execute_rotation(action)
@@ -244,7 +200,7 @@ func execute(action):
 		"select_same_shape", "select_different_shape": execute_selection(action)
 				
 		# default case: unrecognized action
-		_: print('unrecogized action: ', action)
+		_: push_warning('unrecogized action: %s' % [action])
 
 
 func get_random_position():
@@ -306,29 +262,20 @@ func update_active_image(new_object):
 	active_object = new_object
 
 	
-func get_random_config(with_replacement=true):
-	var index = rng.randi_range(0, polyomino_configs.size() - 1)
-	var config = null
-	if with_replacement:
-		config = polyomino_configs[index]
-	else:
-		config = polyomino_configs.pop_left()
-	print(config)
-	return config
+
 	
 	
 func execute_next_shape():
-	hideResultContainer()
 	same = rng.randi() % 2 == 0
 
 	# retrieve configuration details needed to create next polyomino object
-	var ref_config = get_random_config()
+	var ref_config = Globals.get_random_config()
 	
 	var active_config = null
 	if same:
 		active_config = ref_config
 	else:
-		active_config = get_random_config()
+		active_config = Globals.get_random_config()
 	
 	var new_ref_image = generate_image(ref_config)
 	var new_active_image = generate_image(active_config)
@@ -344,7 +291,7 @@ func execute_next_shape():
 func execute_translation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	match action:	
 		'up': active_object.global_position.y -= Globals.LINEAR_DELTA
 		'down': active_object.global_position.y += Globals.LINEAR_DELTA
@@ -352,24 +299,24 @@ func execute_translation(action):
 		'right': active_object.global_position.x += Globals.LINEAR_DELTA
 
 		# default case: unrecognized translation
-		_: print('unrecogized translation: ', action)
+		_: push_warning('unrecogized translation: %s' % [action])
 
 func execute_rotation(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	match action:
 		'rotate_clockwise': active_object.rotation_degrees += Globals.ANGULAR_DELTA
 		'rotate_counterclockwise': active_object.rotation_degrees -= Globals.ANGULAR_DELTA
 		
 		# default case: unrecognized rotation
-		_: print('unrecogized rotation: ', action)
+		_: push_warning('unrecogized rotation %s: ' % [action])
 
 
 func execute_zoom(action):
 	if active_object == null:
 		return
-	hideResultContainer()
+		
 	var new_scale = null
 	
 	match action:
@@ -377,7 +324,7 @@ func execute_zoom(action):
 		'zoom_out': new_scale = active_object.scale - Globals.SCALE_DELTA
 		
 		# default case: unrecognized zoom
-		_: print('unrecogized zoom: ', action)
+		_: push_warning('unrecogized zoom: %s' % [action])
 
 	if new_scale < Globals.MIN_SCALE:
 		new_scale = Globals.MIN_SCALE
@@ -448,19 +395,14 @@ func execute_selection(action):
 		"result": is_correct
 	})
 	
-func toggle_play_mode():
-	# toggle playMode
-	playMode = !playMode
 
 func publish_state():
-	# TODO: move this into a global variable
-	var topic = '/polyomino-world/state'
 	
 	var delta_rot = null
 	var translation = null
 	var scale = null
-	var same = true
 	
+	same = true
 	
 	if (active_object and ref_object):
 		delta_rot = fposmod(rad2deg(active_object.rotation - ref_object.rotation), 360)
@@ -475,22 +417,18 @@ func publish_state():
 		'right_viewport': get_state_msg_for_viewport(right_viewport, active_object),
 		'last_action_seqno': self.last_action_seqno,
 		'same': same,
-		'playMode': playMode,
+		'mode': Globals.mode,
 		"transformations": {
 			"rotation_active": delta_rot,
 			"scale": scale,
 			"translation": translation
 		}
-
 	}
-	
-	
-	#msg = JSON.print(msg)
 	
 	# Godot-AI-Bridge wraps this state into the "data" element of a JSON-encoded message. messages 
 	# are also given a "header" element containing a unique sequence numbers (seqno) and timestamp 
 	# in milliseconds
-	gab.send(topic, msg)
+	gab.send(state_topic, msg)
 	
 	# TODO: Does this variable need to be synchronized???
 	unpublished_change = false
@@ -506,30 +444,26 @@ func _on_publish_state():
 
 # signal handler for Godot-AI-Bridge's "event_requested" signal
 func _on_event_requested(event_details):
-	if Globals.DEBUG_MODE:
+	if Globals.debug:
 		print('Godot Environment: event request received -> "%s"' % event_details)
 	
 	var event = event_details['data']['event']
 	var header = event_details['header']
 	
-	print(event, header)
+	if Globals.debug:
+		print(event, header)
 	
 	if event['type'] == 'action':
 		var seqno = header['seqno']
 		var action = event['value']
 		
-		gab.send("/polyomino/action_requested", {
-			"action": action,
-			"seqno": seqno
-		})
+		gab.send(action_topic, {"action": action, "seqno": seqno})
+		
 		add_action(action, seqno)
 
 
 # signal handler for boundary collisions
 func _on_boundary_entered(boundary):
-	if Globals.DEBUG_MODE:
-		print('boundary entered: ', boundary)
-	
 	if boundary == top_boundary:
 		boundary_collisions['top'] += 1
 	elif boundary == bottom_boundary:
@@ -541,9 +475,6 @@ func _on_boundary_entered(boundary):
 
 
 func _on_boundary_exited(boundary):
-	if Globals.DEBUG_MODE:
-		print('boundary exited: ', boundary)
-		
 	if boundary == top_boundary:
 		boundary_collisions['top'] -= 1
 	elif boundary == bottom_boundary:

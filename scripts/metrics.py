@@ -18,7 +18,7 @@ from shared import shutdown_event
 """ Sample Responses
 /polyomino/action_requested {'data': {'action': 'select_same_shape', 'seqno': 1}, 'header': {'seqno': 6, 'time': 1751298299749}}
 /polyomino/selection-result/ {'data': {'result': True}, 'header': {'seqno': 7, 'time': 1751298299764}}
-/polyomino-world/state {'data': {'last_action_seqno': 1, 'left_viewport': {'id': 17, 'screenshot': None, 'shape': 5}, 'playMode': True, 'right_viewport': {'id': 17, 'screenshot': None, 'shape': 5}, 'same': True, 'transformations': {'rotation_active': 321.97, 'scale': 0.83, 'translation': 10.27}}, 'header': {'seqno': 8, 'time': 1751298299783}}
+/polyomino-world/state {'data': {'last_action_seqno': 1, 'left_viewport': {'id': 17, 'screenshot': None, 'shape': 5}, 'mode': True, 'right_viewport': {'id': 17, 'screenshot': None, 'shape': 5}, 'same': True, 'transformations': {'rotation_active': 321.97, 'scale': 0.83, 'translation': 10.27}}, 'header': {'seqno': 8, 'time': 1751298299783}}
 
 """
 # metrics
@@ -125,7 +125,7 @@ class PolyominoMetrics:
         last_action_seqno = payload['data']['last_action_seqno']
         left_viewport = payload['data']['left_viewport']
         right_viewport = payload['data']['right_viewport']
-        play_mode = payload['data']['playMode']
+        mode = payload['data']['mode']
         same = payload['data']['same']
         transformations = payload['data']['transformations']
         timestamp = payload['header']['time']
@@ -142,7 +142,7 @@ class PolyominoMetrics:
             'seqno': last_action_seqno,
             'left_viewport': left_viewport,
             'right_viewport': right_viewport,
-            'play_mode': play_mode,
+            'mode': mode,
             'same': same,
             'transformations': transformations,
             'timestamp': timestamp,
