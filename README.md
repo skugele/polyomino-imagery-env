@@ -47,5 +47,5 @@ winpty docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e 
 Headless mode is useful when training software agents and there is no need to monitor their interactions with the environment. Since the environment's GUI is disabled, all environment interactions must be made via message passing through the environment's exposed ports.
 
 ```
-docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e POLYENV_MODE='headless' polyomino-env:latest
+docker run -d --rm --name polyomino-env -p 10001:10001 -p 10002:10002 -e POLYENV_DISPLAY='headless' polyomino-env:latest
 ```
