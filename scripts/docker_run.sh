@@ -16,18 +16,19 @@
 #   GLES2 driver to maximize compatibility and reduce graphical requirements.
 #
 # Environment Variables:
-#   POLYENV_MODE  - Specifies the run mode. Accepts "headless" (case-insensitive)
-#                   to enable headless server mode. Any other value runs GUI mode.
+#   POLYENV_DISPLAY - Specifies the display mode. Accepts "headless"
+#                     (case-insensitive) to enable headless server mode. Any
+#                     other value runs GUI mode.
 #
 ###############################################################################
 
 ENV_PCK=poly_env.pck
 GODOT_BIN=/usr/local/bin/godot
 
-# Convert POLYENV_MODE to lower case for case insensitive compare
-RUN_MODE=$(printf "%s" "$POLYENV_MODE" | tr '[:upper:]' '[:lower:]')
+# Convert $POLYENV_DISPLAY to lower case for case insensitive compare
+MODE=$(printf "%s" "$POLYENV_DISPLAY" | tr '[:upper:]' '[:lower:]')
 
-if [ "$RUN_MODE" = "headless" ]; then
+if [ "$MODE" = "headless" ]; then
     echo "Godot running in headless mode"
 
     # Use virtual framebuffer (Xvfb) to fake an X11 server that runs 
