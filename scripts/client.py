@@ -4,124 +4,155 @@
 # Description: Used to submit commands (actions) to the Polyomino Imagery Environment
 # Dependencies: PyZMQ (see https://pyzmq.readthedocs.io/en/latest/)
 #
-import json
 import argparse
-import sys
 import os
-import time
+import platform
+import sys
 
-import zmq  # Python Bindings for ZeroMq (PyZMQ)
-
-DEFAULT_TIMEOUT = 5000  # in milliseconds
-
-DEFAULT_AGENT = 1
-DEFAULT_HOST = 'localhost'
-DEFAULT_PORT = 10002
+from shared import DEFAULT_ACTION_PORT
+from shared import add_host_arg
+from shared import add_port_arg
+from shared import add_verbose_arg
+from shared import create_action_request
+from shared import get_action_publisher
+from shared import send
 
 # maps single character user inputs from command line to Godot agent actions
-ACTION_MAP = {'W': 'up',
-              'S': 'down',
-              'A': 'left',
-              'D': 'right',
-              'Q': 'rotate_counterclockwise',
-              'E': 'rotate_clockwise',
-              '+': 'zoom_in',
-              '-': 'zoom_out',
-              'N': 'next_shape',
-              '1': 'select_same_shape',
-              '0': 'select_different_shape'}
+ACTION_MAP = {
+    "W": "up",
+    "S": "down",
+    "A": "left",
+    "D": "right",
+    "Q": "rotate_counterclockwise",
+    "E": "rotate_clockwise",
+    "+": "zoom_in",
+    "-": "zoom_out",
+    "N": "next_shape",
+    "1": "select_same_shape",
+    "0": "select_different_shape",
+}
 
 ACTION_IDS = list(ACTION_MAP.keys())
 
-verbose = False
-seqno = 1  # current request's sequence number
-
 
 def parse_args():
-    """ Parses command line arguments.
+    """Parses command line arguments.
 
-    :return: argparse parser with parsed command line args
+    Returns:
+        argparse.Namespace: Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(description='Polyomino Imagery Environment - Action Client')
+    parser = argparse.ArgumentParser(
+        description="Polyomino Imagery Environment - Action Client"
+    )
 
-    parser.add_argument('--id', type=int, required=False, default=DEFAULT_AGENT,
-                        help=f'the id of the agent to which this action will be sent (default: {DEFAULT_AGENT})')
-    parser.add_argument('--host', type=str, required=False, default=DEFAULT_HOST,
-                        help=f'the IP address of host running the GAB action listener (default: {DEFAULT_HOST})')
-    parser.add_argument('--port', type=int, required=False, default=DEFAULT_PORT,
-                        help=f'the port number of the GAB action listener (default: {DEFAULT_PORT})')
-    parser.add_argument('--verbose', required=False, action="store_true",
-                        help='increases verbosity (displays requests & replies)')
+    add_host_arg(parser)
+    add_port_arg(parser, default_port=DEFAULT_ACTION_PORT)
+    add_verbose_arg(parser)
 
     return parser.parse_args()
 
 
-def connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
-    """ Establishes a connection to Godot AI Bridge action listener.
+def is_git_bash():
+    """Checks if the script is running in Git Bash on Windows."""
+    shell = os.environ.get("SHELL", "")
+    term = os.environ.get("TERM", "")
 
-    :param host: the GAB action listener's host IP address
-    :param port: the GAB action listener's port number
-    :return: socket connection
+    return (
+            "mintty" in term.lower()
+            or "msys" in shell.lower()
+            or "git" in shell.lower()
+            or "mingw" in term.lower()
+    )
+
+
+def get_action_from_user(platform_id=None):
+    """Reads a single keypress from the user
+    - On Windows: returns the key immediately.
+    - On Linux/macOS: returns the key immediately.
+    - On other platforms: falls back to requiring Enter.
     """
-    socket = zmq.Context().socket(zmq.REQ)
-    socket.connect(f'tcp://{host}:{str(port)}')
 
-    # without timeout the process can hang indefinitely
-    socket.setsockopt(zmq.RCVTIMEO, DEFAULT_TIMEOUT)
-    return socket
+    # must exclude Git Bash on Windows because it doesn't work with msvcrt
+    if platform_id == "Windows" and not is_git_bash():
+        import msvcrt
+        action = msvcrt.getwch()
 
+    elif platform_id in ("Linux", "Darwin"):  # Darwin = macOS
+        import tty
+        import termios
 
-def send(connection, request):
-    """ Encodes request and sends it to the GAB action listener.
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            action = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-    :param connection: connection: a connection to the GAB action listener
-    :param request: a dictionary containing the action request payload
-    :return: GAB action listener's (SUCCESS or ERROR) reply
-    """
-    encoded_request = json.dumps(request)
-    connection.send_string(encoded_request)
-    return connection.recv_json()
+    else:
+        # unsupported platform: enter must be pressed
+        action = input("Enter a command (then press Enter): ")
 
-
-def create_request(data):
-    global seqno
-    header = {
-        'seqno': seqno,
-        'time': round(time.time() * 1000)  # current time in milliseconds
-    }
-
-    return {'header': header, 'data': data}
+    return action.upper()
 
 
-if __name__ == '__main__':
+def get_prompt(platform_id=None):
+    supported_platforms = ("Windows", "Linux", "Darwin")  # Darwin = macOS
+
+    # prompt for supported platforms that allow action input without hitting Enter
+    default_prompt = f'Select an action ({", ".join(ACTION_IDS[0:-1])}, or {ACTION_IDS[-1]})'
+
+    # prompt for non-supported platforms that require Enter following each action
+    alt_prompt = f'{default_prompt} followed by [ENTER]'
+
+    return default_prompt if platform_id in supported_platforms else alt_prompt
+
+
+def main():
+    """Main entry point for the script."""
     try:
         args = parse_args()
-        connection = connect(host=args.host, port=args.port)
 
-        # a global action counter (included in request payload)
-        action_id = 0
-        agent_id = args.id
+        platform_id = platform.system()
+        if args.verbose:
+            print(f"Detected platform: {platform_id}", flush=True)
+
+        prompt = get_prompt(platform_id)
+
+        connection = get_action_publisher(host=args.host, port=args.port)
+        seqno = 1  # current request's sequence number
 
         # MAIN LOOP: receive action via CLI, and send it to GAB action listener
-        print('Select an action ID followed by [ENTER]. (All others quit.)')
         while True:
-            # displays available action ids on each prompt
-            action = input(f'>> {", ".join(ACTION_IDS[0:-1])}, or {ACTION_IDS[-1]}? ').upper()
+            print(prompt, flush=True)
+            action = get_action_from_user(platform_id)  # read a single keypress
             if action not in ACTION_MAP:
                 break
 
-            request = create_request(data={'event':{'type':'action', 'value':ACTION_MAP[action]}})
+            if args.verbose:
+                print(f'You selected {action}')
+
+            request = create_action_request(
+                data={"event": {"type": "action", "value": ACTION_MAP[action]}},
+                seqno=seqno,
+            )
+
             reply = send(connection, request)
 
             if args.verbose:
-                print(f'\t REQUEST: {request}')
-                print(f'\t REPLY: {reply}')
+                print(f"\t REQUEST: {request}")
+                print(f"\t REPLY: {reply}")
 
             seqno += 1
 
     except KeyboardInterrupt:
+        print("Interrupted by user. Shutting down...", flush=True)
 
-        try:
-            sys.exit(1)
-        except SystemExit:
-            os._exit(1)
+    try:
+        sys.exit(1)
+    except SystemExit:
+        os._exit(1)
+
+
+if __name__ == "__main__":
+    main()
