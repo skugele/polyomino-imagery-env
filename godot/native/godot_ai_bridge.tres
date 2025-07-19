@@ -1,7 +1,9 @@
 [gd_resource type="GDNativeLibrary" format=2]
 
 [resource]
+entry/OSX.arm64 = "res://bin/macos/arm/64/libgab.dylib"
 entry/Windows.64 = "res://bin/windows/64/libgab.dll"
 entry/X11.64 = "res://bin/linux/64/libgab.so"
+dependency/OSX.arm64 = [  ]
 dependency/Windows.64 = [  ]
 dependency/X11.64 = [  ]
